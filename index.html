@@ -5,142 +5,150 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Invoice Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#f4f5f7;--surface:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;
-  --green:#059669;--green-bg:#ecfdf5;--red:#dc2626;--red-bg:#fef2f2;
-  --amber:#d97706;--amber-bg:#fffbeb;--blue:#2563eb;--radius:10px;
+  --bg:#F4F5F7;--surface:#fff;--border:#E5E7EB;--text:#111827;--muted:#6B7280;
+  --green:#059669;--green-bg:#ECFDF5;--red:#DC2626;--red-bg:#FEF2F2;
+  --amber:#D97706;--amber-bg:#FFFBEB;--blue:#2563EB;--blue-bg:#EFF6FF;
+  --radius:10px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 
+/* ── Header ── */
 header{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200;gap:12px}
 .logo{font-size:15px;font-weight:700;letter-spacing:-.4px;flex-shrink:0}.logo em{color:var(--red);font-style:normal}
-.tabs{display:flex;gap:2px;background:#f3f4f6;border-radius:8px;padding:3px}
-.tb{background:none;border:none;padding:7px 16px;font-size:13px;border-radius:6px;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;white-space:nowrap}
+.tabs{display:flex;gap:2px;background:#F3F4F6;border-radius:8px;padding:3px}
+.tb{background:none;border:none;padding:7px 15px;font-size:13px;border-radius:6px;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;white-space:nowrap}
 .tb.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .badge{background:var(--red);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px}
-.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.entry-ct{font-size:12px;color:var(--muted)}
+.entry-ct{font-size:12px;color:var(--muted);flex-shrink:0}
 
 main{max-width:1200px;margin:0 auto;padding:24px 20px}
 .pane{display:none}.pane.on{display:block}
 
-/* ── cards ── */
+/* ── Cards ── */
 .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
 .card-hd{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:16px}
 
-/* ── info box ── */
-.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;font-size:13px;color:#1e40af;line-height:1.8}
-.info-box strong{font-weight:700}
+/* ── Upload zone ── */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFAFA;margin-bottom:16px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-bg)}
+.upload-zone h3{font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.upload-zone p{font-size:13px;color:var(--muted);margin-bottom:16px}
+.upload-zone .ext{display:inline-flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.ext-tag{background:#F3F4F6;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;color:var(--muted)}
+.upload-result{background:var(--green-bg);border:1px solid #A7F3D0;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green);display:none}
+.upload-err{background:var(--red-bg);border:1px solid #FECACA;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red);display:none}
 
-/* ── form ── */
+/* ── Backup bar ── */
+.backup-bar{background:var(--amber-bg);border:1px solid #FCD34D;border-radius:var(--radius);padding:11px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.backup-bar p{font-size:13px;color:#92400E;flex:1;min-width:200px}
+
+/* ── Form ── */
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.fl{display:flex;flex-direction:column;gap:5px}
-.fl.full{grid-column:1/-1}
-.fl.third{grid-column:span 1}
+.fl{display:flex;flex-direction:column;gap:5px}.fl.full{grid-column:1/-1}
 .fl label{font-size:12px;font-weight:600;color:var(--muted)}
-.fl .sub-label{font-size:10px;color:var(--muted);font-weight:400;margin-top:1px}
+.fl .sub{font-size:10px;color:var(--muted);font-weight:400}
 input,select{font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:7px;padding:9px 11px;background:#fff;color:var(--text);width:100%;transition:border .15s}
 input:focus,select:focus{outline:none;border-color:#111}
-input[readonly]{background:#f9fafb;color:var(--muted);cursor:not-allowed}
-input.auto-green{background:#f0fdf4;color:var(--green);border-color:#a7f3d0;font-weight:600}
-input.auto-red{background:var(--red-bg);color:var(--red);border-color:#fecaca;font-weight:600}
-.section-label{grid-column:1/-1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:8px 0 2px;border-top:1px solid var(--border);margin-top:4px}
-.btn-save{background:#111;color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:opacity .15s;margin-top:4px;letter-spacing:.2px}
+input[readonly]{background:#F9FAFB;color:var(--muted);cursor:not-allowed}
+.auto-g{background:var(--green-bg)!important;color:var(--green)!important;border-color:#A7F3D0!important;font-weight:600}
+.auto-r{background:var(--red-bg)!important;color:var(--red)!important;border-color:#FECACA!important;font-weight:600}
+.sec-lbl{grid-column:1/-1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px}
+.btn-save{background:#111;color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;margin-top:4px;transition:opacity .15s}
 .btn-save:hover{opacity:.83}
 .form-msg{font-size:13px;padding:8px 0;min-height:26px}
 .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.7}
 
-/* ── backup bar ── */
-.backup-bar{background:var(--amber-bg);border:1px solid #fcd34d;border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.backup-bar p{font-size:13px;color:#92400e;flex:1}
-.backup-bar strong{font-weight:700}
+/* ── PAYABLE highlight ── */
+.payable-banner{background:#FFF1F2;border:2px solid #FCA5A5;border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.payable-main{display:flex;flex-direction:column;gap:4px}
+.payable-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#9F1239}
+.payable-val{font-size:36px;font-weight:900;color:var(--red);letter-spacing:-1px;line-height:1}
+.payable-sub{font-size:13px;color:#BE123C}
+.payable-breakdown{display:flex;gap:20px;flex-wrap:wrap}
+.pb-item{text-align:center}
+.pb-item-val{font-size:18px;font-weight:800;color:var(--red)}
+.pb-item-lbl{font-size:11px;color:#BE123C;margin-top:2px}
 
-/* ── metrics ── */
+/* ── Metrics ── */
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
 @media(max-width:640px){.metrics{grid-template-columns:1fr 1fr}}
 .mc{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
 .mc::after{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
 .mc.green::after{background:var(--green)}.mc.red::after{background:var(--red)}
-.mc.amber::after{background:var(--amber)}.mc.blue::after{background:var(--blue)}.mc.gray::after{background:#9ca3af}
+.mc.amber::after{background:var(--amber)}.mc.blue::after{background:var(--blue)}.mc.gray::after{background:#9CA3AF}
 .mc-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
 .mc-val{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1}
 .mc-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .mc.green .mc-val{color:var(--green)}.mc.red .mc-val{color:var(--red)}
 .mc.amber .mc-val{color:var(--amber)}.mc.blue .mc-val{color:var(--blue)}
 
-/* ── charts ── */
+/* ── Charts ── */
 .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 @media(max-width:700px){.charts-row{grid-template-columns:1fr}}
 .chart-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
 .chart-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:14px}
 .chart-wrap{position:relative;height:220px}
 
-/* ── filters ── */
+/* ── Filters ── */
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
 .flabel{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px}
-.fbtn{background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 13px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--muted);transition:all .15s}
+.fbtn{background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--muted);transition:all .15s}
 .fbtn:hover,.fbtn.on{background:#111;color:#fff;border-color:#111}
 
-/* ── alerts ── */
-.alert{background:var(--red-bg);border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:var(--red);line-height:1.6}
-.alert::before{content:'⚠  '}
-.all-ok{background:var(--green-bg);border:1px solid #a7f3d0;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green)}
+/* ── Alerts ── */
+.alert-box{background:var(--red-bg);border:1px solid #FECACA;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:var(--red);line-height:1.6}
+.alert-box::before{content:'⚠  '}
+.all-ok{background:var(--green-bg);border:1px solid #A7F3D0;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green)}
 
-/* ── progress ── */
+/* ── Progress ── */
 .pb-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
 .pb-label{font-size:12px;min-width:115px;color:var(--muted)}
-.pb{flex:1;height:7px;background:#f3f4f6;border-radius:99px;overflow:hidden}
+.pb{flex:1;height:7px;background:#F3F4F6;border-radius:99px;overflow:hidden}
 .pb-fill{height:100%;border-radius:99px;transition:width .5s}
 .pb-amt{font-size:12px;min-width:90px;text-align:right;font-weight:700}
 
-/* ── party rows ── */
-.party-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6}
+/* ── Party rows ── */
+.party-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F3F4F6}
 .party-row:last-child{border-bottom:none}
 .party-name{font-size:13px;font-weight:600}
 .party-meta{font-size:11px;color:var(--muted);margin-top:1px}
 .party-out{font-size:15px;font-weight:800}
 
-/* ── table ── */
+/* ── Table ── */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
-table{width:100%;border-collapse:collapse;min-width:1100px}
-thead th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:10px 11px;border-bottom:1px solid var(--border);background:#f9fafb;text-align:left;white-space:nowrap}
-tbody td{padding:9px 11px;border-bottom:1px solid #f3f4f6;font-size:12px}
+table{width:100%;border-collapse:collapse;min-width:1080px}
+thead th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:10px 11px;border-bottom:1px solid var(--border);background:#F9FAFB;text-align:left;white-space:nowrap}
+tbody td{padding:9px 11px;border-bottom:1px solid #F3F4F6;font-size:12px}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:#fafafa}
-tfoot td{padding:9px 11px;font-size:12px;font-weight:700;background:#f3f4f6;border-top:1px solid var(--border)}
+tbody tr:hover{background:#FAFAFA}
+tfoot td{padding:9px 11px;font-size:12px;font-weight:700;background:#F3F4F6;border-top:1px solid var(--border)}
 .num{text-align:right}
-.ovd td{background:#fff5f5}
-.ovd td:first-child{border-left:3px solid var(--red)}
-.del-btn{background:none;border:none;color:#d1d5db;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:12px;transition:color .15s}
+.ovd td{background:#FFF5F5}.ovd td:first-child{border-left:3px solid var(--red)}
+.del-btn{background:none;border:none;color:#D1D5DB;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:12px;transition:color .15s}
 .del-btn:hover{color:var(--red)}
 .st-sel{font-size:11px;border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-family:inherit;cursor:pointer;background:#fff}
 
-/* ── btn row ── */
+/* ── Buttons ── */
 .btn-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .btn{background:#fff;border:1px solid var(--border);border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);display:flex;align-items:center;gap:5px;transition:all .15s}
-.btn:hover{background:#f9fafb;border-color:#9ca3af}
-.btn.dark{background:#111;color:#fff;border-color:#111}
-.btn.dark:hover{background:#333}
-.btn.green-btn{background:var(--green-bg);color:var(--green);border-color:#a7f3d0}
-.btn.red-btn{color:var(--red);border-color:#fecaca}
-.btn.red-btn:hover{background:var(--red-bg)}
+.btn:hover{background:#F9FAFB;border-color:#9CA3AF}
+.btn.dark{background:#111;color:#fff;border-color:#111}.btn.dark:hover{background:#333}
+.btn.green{background:var(--green-bg);color:var(--green);border-color:#A7F3D0}
+.btn.amber{background:var(--amber-bg);color:var(--amber);border-color:#FCD34D}
 
 .em{text-align:center;padding:40px;color:var(--muted)}
-.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
-.tag.paid{background:var(--green-bg);color:var(--green)}
-.tag.partial{background:var(--amber-bg);color:var(--amber)}
-.tag.pending{background:var(--red-bg);color:var(--red)}
-.tag.advance{background:#eff6ff;color:var(--blue)}
 
-/* ── print ── */
+/* ── Print ── */
 @media print{
   header,.btn-row,.filter-bar,#pane-add,#pane-ledger,.no-print,.backup-bar{display:none!important}
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   main{padding:0;max-width:100%}
   .pane{display:block!important}
-  .card,.chart-box,.mc{break-inside:avoid;border:1px solid #ddd!important}
+  .card,.chart-box,.mc,.payable-banner{break-inside:avoid;border:1px solid #ddd!important}
   .metrics{grid-template-columns:repeat(3,1fr)!important}
   .charts-row{grid-template-columns:1fr 1fr!important}
   .chart-wrap{height:180px!important}
@@ -159,104 +167,138 @@ tfoot td{padding:9px 11px;font-size:12px;font-weight:700;background:#f3f4f6;bord
 <header>
   <div class="logo">Invoice<em>Tracker</em></div>
   <div class="tabs">
-    <button class="tb on" onclick="sw('add',this)">+ Add Entry</button>
-    <button class="tb" onclick="sw('ledger',this)">Ledger</button>
-    <button class="tb" id="ceo-tab" onclick="sw('ceo',this)">CEO Dashboard</button>
+    <button class="tb on"  onclick="sw('upload',this)">⬆ Upload Sheet</button>
+    <button class="tb"     onclick="sw('add',this)">+ Manual Entry</button>
+    <button class="tb"     onclick="sw('ledger',this)">Ledger</button>
+    <button class="tb"     id="ceo-tab" onclick="sw('ceo',this)">CEO Dashboard</button>
   </div>
-  <div class="hdr-right">
-    <span class="entry-ct" id="entry-ct">0 entries</span>
-  </div>
+  <span class="entry-ct" id="entry-ct">0 entries</span>
 </header>
 
 <main>
 
-<!-- ══ ADD ENTRY ════════════════════════════════════════ -->
-<div id="pane-add" class="pane on">
+<!-- ══ UPLOAD SHEET ═══════════════════════════════════════ -->
+<div id="pane-upload" class="pane on">
 
   <div class="backup-bar">
-    <p><strong>💾 Data saved locally on this browser.</strong> Never clear browser cache/data for this site. Use backup buttons regularly.</p>
-    <button class="btn green-btn" onclick="backupData()">⬇ Backup Now</button>
-    <button class="btn" onclick="document.getElementById('restore-input').click()">↑ Restore Backup</button>
-    <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(this)">
-  </div>
-
-  <div class="info-box">
-    <strong>How this works:</strong><br>
-    • <strong>Credit Period</strong> = Time supplier gives you to pay (e.g. 30 days) → Due date auto-calculates from invoice date<br>
-    • <strong>Advance Paid</strong> = Amount you paid <em>before</em> receiving goods (pre-payment to supplier)<br>
-    • <strong>Payment Received</strong> = Amount received <em>from party</em> after invoice (if you're the seller) — leave 0 if not applicable<br>
-    • <strong>Net Due</strong> = Total − Advance − Payment Received − TDS (auto)
+    <p>💾 Data saved in browser. <strong>Take backup regularly</strong> — especially after uploading new sheets.</p>
+    <button class="btn green" onclick="backupData()">⬇ Backup JSON</button>
+    <button class="btn" onclick="document.getElementById('restore-inp').click()">↑ Restore</button>
+    <input type="file" id="restore-inp" accept=".json" style="display:none" onchange="restoreData(this)">
   </div>
 
   <div class="card">
-    <div class="card-hd">New Invoice Entry</div>
-    <div class="fg">
+    <div class="card-hd">Step 1 — Download Template</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the Excel template, fill it, save it. Then upload below.</p>
+    <button class="btn dark" onclick="downloadTemplate()">⬇ Download Excel Template (.xlsx)</button>
+    <p class="hint" style="margin-top:10px">
+      ✏ Fill only <strong>yellow columns</strong> — green columns (Total, Due Date, Net Due) auto-calculate<br>
+      📋 Sheet has 50 pre-formatted rows with dropdown for Status field<br>
+      💡 Credit Days = 30 means payment due 30 days after invoice date
+    </p>
+  </div>
 
-      <!-- Basic Info -->
-      <div class="section-label">Invoice Details</div>
+  <div class="card">
+    <div class="card-hd">Step 2 — Upload Filled Sheet</div>
+    <div class="upload-zone" id="drop-zone"
+         onclick="document.getElementById('file-inp').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <h3>📂 Click to select file or drag & drop here</h3>
+      <p>Supports Excel and CSV files from the template</p>
+      <div class="ext">
+        <span class="ext-tag">.xlsx</span>
+        <span class="ext-tag">.xls</span>
+        <span class="ext-tag">.csv</span>
+      </div>
+    </div>
+    <input type="file" id="file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+    <div class="upload-result" id="upload-ok"></div>
+    <div class="upload-err"   id="upload-err"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">How it works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div style="padding:14px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:20px;margin-bottom:6px">1️⃣</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">Download Template</div>
+        <div style="font-size:12px;color:var(--muted)">Get the pre-formatted Excel file above</div>
+      </div>
+      <div style="padding:14px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:20px;margin-bottom:6px">2️⃣</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">Fill Yellow Columns</div>
+        <div style="font-size:12px;color:var(--muted)">Enter invoice data. Green columns auto-calculate.</div>
+      </div>
+      <div style="padding:14px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:20px;margin-bottom:6px">3️⃣</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">Upload Here</div>
+        <div style="font-size:12px;color:var(--muted)">Drop your filled file in the upload box</div>
+      </div>
+      <div style="padding:14px;background:var(--green-bg);border-radius:8px;border:1px solid #A7F3D0">
+        <div style="font-size:20px;margin-bottom:6px">4️⃣</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--green)">Dashboard Ready</div>
+        <div style="font-size:12px;color:var(--green)">CEO Dashboard auto-builds. Download PDF. Done.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MANUAL ENTRY ═══════════════════════════════════════ -->
+<div id="pane-add" class="pane">
+  <div class="card">
+    <div class="card-hd">Manual Invoice Entry</div>
+    <div class="fg">
+      <div class="sec-lbl">Invoice Details</div>
       <div class="fl"><label>Sr. No.</label><input id="f-sr" readonly placeholder="Auto"></div>
-      <div class="fl"><label>Invoice Date *</label><input type="date" id="f-date" oninput="calcDueDate()"></div>
-      <div class="fl full"><label>Party Name * <span class="sub-label">(Supplier / Customer)</span></label><input id="f-party" placeholder="e.g. Rajesh Traders Pvt Ltd"></div>
+      <div class="fl"><label>Invoice Date *</label><input type="date" id="f-date" oninput="calcDue()"></div>
+      <div class="fl full"><label>Party Name *</label><input id="f-party" placeholder="Supplier or customer name"></div>
       <div class="fl"><label>GSTIN</label><input id="f-gstin" placeholder="22AAAAA0000A1Z5" maxlength="15"></div>
       <div class="fl"><label>Invoice No. *</label><input id="f-inv" placeholder="INV-001"></div>
 
-      <!-- Amounts -->
-      <div class="section-label">Invoice Amount</div>
+      <div class="sec-lbl">Invoice Amount</div>
       <div class="fl"><label>Taxable Amount (₹)</label><input type="number" id="f-taxable" placeholder="0" min="0" oninput="autoCalc()"></div>
       <div class="fl"><label>Tax / GST (₹)</label><input type="number" id="f-tax" placeholder="0" min="0" oninput="autoCalc()"></div>
-      <div class="fl"><label>Invoice Total (₹) — Auto</label><input type="number" id="f-total" readonly class="auto-green"></div>
-      <div class="fl"><label>TDS Deducted (₹)</label><input type="number" id="f-tds" placeholder="0" min="0" oninput="autoCalc()"></div>
+      <div class="fl"><label>Total (₹) — Auto</label><input type="number" id="f-total" readonly class="auto-g"></div>
+      <div class="fl"><label>TDS (₹)</label><input type="number" id="f-tds" placeholder="0" min="0" oninput="autoCalc()"></div>
 
-      <!-- Payment Terms -->
-      <div class="section-label">Payment Terms & Settlement</div>
+      <div class="sec-lbl">Payment Terms</div>
       <div class="fl">
-        <label>Credit Period (days) <span class="sub-label">Due date = Invoice date + these days</span></label>
-        <input type="number" id="f-credit-days" placeholder="e.g. 30" min="0" oninput="calcDueDate()">
+        <label>Credit Period (days) <span class="sub">→ Due date auto-fills</span></label>
+        <input type="number" id="f-cdays" placeholder="e.g. 30" min="0" oninput="calcDue()">
       </div>
+      <div class="fl"><label>Due Date — Auto</label><input type="date" id="f-due" readonly class="auto-g"></div>
       <div class="fl">
-        <label>Due Date — Auto calculated</label>
-        <input type="date" id="f-due" readonly class="auto-green">
-      </div>
-      <div class="fl">
-        <label>Advance Paid (₹) <span class="sub-label">You paid before receiving goods</span></label>
+        <label>Advance Paid (₹) <span class="sub">Paid before receiving goods</span></label>
         <input type="number" id="f-advance" placeholder="0" min="0" oninput="autoCalc()">
       </div>
       <div class="fl">
-        <label>Payment Received (₹) <span class="sub-label">Received after invoice</span></label>
+        <label>Payment Received (₹) <span class="sub">Received after invoice</span></label>
         <input type="number" id="f-payment" placeholder="0" min="0" oninput="autoCalc()">
       </div>
-      <div class="fl">
-        <label>Net Due (₹) — Auto</label>
-        <input type="number" id="f-net-due" readonly id="f-net-due">
-      </div>
-      <div class="fl">
-        <label>Payment Status</label>
+      <div class="fl"><label>Net Due (₹) — Auto</label><input type="number" id="f-netdue" readonly></div>
+      <div class="fl"><label>Status</label>
         <select id="f-status">
-          <option value="Pending">Pending</option>
-          <option value="Advance Paid">Advance Paid (Waiting for goods)</option>
-          <option value="Partial">Partial Payment</option>
-          <option value="Paid">Fully Paid</option>
+          <option>Pending</option>
+          <option>Advance Paid</option>
+          <option>Partial</option>
+          <option>Paid</option>
         </select>
       </div>
-
-      <div class="fl full">
-        <button class="btn-save" onclick="addEntry()">Save Entry</button>
-      </div>
+      <div class="fl full"><button class="btn-save" onclick="addEntry()">Save Entry</button></div>
     </div>
     <div class="form-msg" id="form-msg"></div>
   </div>
-  <p class="hint">
-    ⚡ Total = Taxable + Tax &nbsp;|&nbsp; Due Date = Invoice Date + Credit Period &nbsp;|&nbsp; Net Due = Total − Advance − Payment − TDS<br>
-    💾 Data stored in browser. <strong>Take backup weekly</strong> using the backup button above.
-  </p>
 </div>
 
-<!-- ══ LEDGER ═══════════════════════════════════════════ -->
+<!-- ══ LEDGER ════════════════════════════════════════════ -->
 <div id="pane-ledger" class="pane">
   <div class="btn-row">
     <button class="btn dark" onclick="exportCSV()">⬇ Export CSV</button>
-    <button class="btn green-btn" onclick="backupData()">💾 Backup JSON</button>
+    <button class="btn green" onclick="backupData()">💾 Backup</button>
     <button class="btn" onclick="renderLedger()">↺ Refresh</button>
+    <button class="btn" style="color:var(--red);border-color:#FECACA;margin-left:auto" onclick="clearAll()">🗑 Clear All</button>
   </div>
   <div id="ledger-body"><div class="em">Loading…</div></div>
 </div>
@@ -267,11 +309,9 @@ tfoot td{padding:9px 11px;font-size:12px;font-weight:700;background:#f3f4f6;bord
     <button class="btn dark" onclick="printDash()">🖨 Download PDF</button>
     <button class="btn" onclick="renderCEO()">↺ Refresh</button>
   </div>
-
   <div class="print-hd" id="print-hd">
-    <div><h1>CEO Dashboard — Invoice & Collection Report</h1><p id="print-meta"></p></div>
+    <div><h1>CEO Dashboard — Invoice & Payable Report</h1><p id="print-meta"></p></div>
   </div>
-
   <div class="filter-bar no-print">
     <span class="flabel">Period:</span>
     <button class="fbtn on" onclick="setF('all',this)">All time</button>
@@ -284,108 +324,88 @@ tfoot td{padding:9px 11px;font-size:12px;font-weight:700;background:#f3f4f6;bord
     <button class="fbtn" onclick="setF('year',this)">This year</button>
     <button class="fbtn" onclick="setF('lastyear',this)">Last year</button>
   </div>
-
-  <div id="ceo-body"><div class="em">Loading dashboard…</div></div>
+  <div id="ceo-body"><div class="em">Loading…</div></div>
 </div>
 
 </main>
 
 <script>
 // ══ Storage ═══════════════════════════════════════════════
-const KEY = 'inv_tracker_v4';
-function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{ return []; } }
-function save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
+const KEY = 'inv_v5';
+const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{ return []; } };
+const save = d  => localStorage.setItem(KEY, JSON.stringify(d));
 
-// ══ State ════════════════════════════════════════════════
 let activeF = 'all';
-let pieChart = null, barChart = null;
+let pieChart=null, barChart=null;
 
-// ══ Init ═════════════════════════════════════════════════
+// ══ Init ══════════════════════════════════════════════════
 function init(){
-  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value = tod();
   updateHeader();
 }
+const tod = () => new Date().toISOString().split('T')[0];
 
 function updateHeader(){
   const d = load();
-  document.getElementById('entry-ct').textContent = d.length + ' entr' + (d.length===1?'y':'ies');
+  document.getElementById('entry-ct').textContent = d.length+' entr'+(d.length===1?'y':'ies');
   updateBadge(d);
-  document.getElementById('f-sr').value = d.length + 1;
+  document.getElementById('f-sr').value = d.length+1;
 }
 
-// ══ Auto-calculations ════════════════════════════════════
-function autoCalc(){
-  const taxable  = parseFloat(document.getElementById('f-taxable').value)||0;
-  const tax      = parseFloat(document.getElementById('f-tax').value)||0;
-  const tds      = parseFloat(document.getElementById('f-tds').value)||0;
-  const advance  = parseFloat(document.getElementById('f-advance').value)||0;
-  const payment  = parseFloat(document.getElementById('f-payment').value)||0;
-  const total    = taxable + tax;
-  const netDue   = Math.max(0, total - tds - advance - payment);
-
-  document.getElementById('f-total').value   = total || '';
-  const netEl = document.getElementById('f-net-due');
-  netEl.value = netDue || 0;
-  netEl.className = netDue > 0 ? 'auto-red' : 'auto-green';
-
-  // Auto-suggest status
-  const sel = document.getElementById('f-status');
-  if(total > 0){
-    if(netDue === 0)                          sel.value = 'Paid';
-    else if(advance > 0 && payment === 0)     sel.value = 'Advance Paid';
-    else if(advance + payment > 0)            sel.value = 'Partial';
-    else                                      sel.value = 'Pending';
-  }
-}
-
-function calcDueDate(){
-  const dateVal  = document.getElementById('f-date').value;
-  const days     = parseInt(document.getElementById('f-credit-days').value)||0;
-  const dueEl    = document.getElementById('f-due');
-  if(dateVal && days > 0){
-    const due = new Date(dateVal);
-    due.setDate(due.getDate() + days);
-    dueEl.value = due.toISOString().split('T')[0];
-  } else {
-    dueEl.value = '';
-  }
-}
-
-// ══ Tabs ═════════════════════════════════════════════════
-function sw(tab, btn){
+// ══ Tabs ══════════════════════════════════════════════════
+function sw(tab,btn){
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('pane-'+tab).classList.add('on');
   if(tab==='ledger') renderLedger();
-  if(tab==='ceo')    renderCEO();
+  if(tab==='ceo') renderCEO();
 }
 
-// ══ Helpers ══════════════════════════════════════════════
-const fmt  = n => '₹' + (Math.round(Number(n)||0)).toLocaleString('en-IN');
-const fmtD = d => { if(!d)return'—'; const[y,m,day]=String(d).split('T')[0].split('-'); return `${day}/${m}/${y}`; };
+// ══ Helpers ═══════════════════════════════════════════════
+const fmt  = n => '₹'+(Math.round(Number(n)||0)).toLocaleString('en-IN');
+const fmtD = d => { if(!d)return'—'; const s=String(d).split('T')[0]; const[y,m,day]=s.split('-'); return `${day}/${m}/${y}`; };
 const parseD = d => { if(!d)return null; return new Date(String(d).split('T')[0]); };
 const netDue = e => Math.max(0,(e.total||0)-(e.tds||0)-(e.advance||0)-(e.payment||0));
 
-// ══ Date filter ══════════════════════════════════════════
-function setF(f, btn){
-  activeF = f;
-  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  renderCEO();
+// ══ Form calcs ════════════════════════════════════════════
+function autoCalc(){
+  const tx=parseFloat(document.getElementById('f-taxable').value)||0;
+  const t =parseFloat(document.getElementById('f-tax').value)||0;
+  const tds=parseFloat(document.getElementById('f-tds').value)||0;
+  const adv=parseFloat(document.getElementById('f-advance').value)||0;
+  const pay=parseFloat(document.getElementById('f-payment').value)||0;
+  const total=tx+t, nd=Math.max(0,total-tds-adv-pay);
+  document.getElementById('f-total').value=total||'';
+  const el=document.getElementById('f-netdue');
+  el.value=nd; el.className=nd>0?'auto-r':'auto-g';
+  const sel=document.getElementById('f-status');
+  if(total>0){ if(nd===0)sel.value='Paid'; else if(adv>0&&pay===0)sel.value='Advance Paid'; else if(adv+pay>0)sel.value='Partial'; else sel.value='Pending'; }
+}
+function calcDue(){
+  const d=document.getElementById('f-date').value;
+  const cd=parseInt(document.getElementById('f-cdays').value)||0;
+  if(d&&cd>0){ const due=new Date(d); due.setDate(due.getDate()+cd); document.getElementById('f-due').value=due.toISOString().split('T')[0]; }
+  else document.getElementById('f-due').value='';
 }
 
+// ══ Date filter ═══════════════════════════════════════════
+function setF(f,btn){
+  activeF=f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); renderCEO();
+}
 function filterData(data){
   if(activeF==='all') return data;
-  const now = new Date(); now.setHours(0,0,0,0);
+  const now=new Date(); now.setHours(0,0,0,0);
   return data.filter(e=>{
-    const dt = parseD(e.date); if(!dt)return false; dt.setHours(0,0,0,0);
-    if(activeF==='today')     return +dt===+now;
-    if(activeF==='yesterday'){ const y=new Date(now);y.setDate(y.getDate()-1);return+dt===+y; }
-    if(activeF==='week'){      const s=new Date(now);s.setDate(s.getDate()-s.getDay());return dt>=s&&dt<=now; }
+    const dt=parseD(e.date); if(!dt)return false; dt.setHours(0,0,0,0);
+    if(activeF==='today')     return+dt===+now;
+    if(activeF==='yesterday'){const y=new Date(now);y.setDate(y.getDate()-1);return+dt===+y;}
+    if(activeF==='week'){const s=new Date(now);s.setDate(s.getDate()-s.getDay());return dt>=s&&dt<=now;}
     if(activeF==='month')     return dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear();
-    if(activeF==='lastmonth'){ const s=new Date(now.getFullYear(),now.getMonth()-1,1),e2=new Date(now.getFullYear(),now.getMonth(),0);return dt>=s&&dt<=e2; }
-    if(activeF==='quarter'){   const q=Math.floor(now.getMonth()/3);const s=new Date(now.getFullYear(),q*3,1);return dt>=s&&dt<=now; }
+    if(activeF==='lastmonth'){const s=new Date(now.getFullYear(),now.getMonth()-1,1),e2=new Date(now.getFullYear(),now.getMonth(),0);return dt>=s&&dt<=e2;}
+    if(activeF==='quarter'){const q=Math.floor(now.getMonth()/3);const s=new Date(now.getFullYear(),q*3,1);return dt>=s&&dt<=now;}
     if(activeF==='year')      return dt.getFullYear()===now.getFullYear();
     if(activeF==='lastyear')  return dt.getFullYear()===now.getFullYear()-1;
     return true;
@@ -399,81 +419,224 @@ function updateBadge(data){
   document.getElementById('ceo-tab').innerHTML='CEO Dashboard'+(ov?`<span class="badge">${ov}</span>`:'');
 }
 
-// ══ Add Entry ════════════════════════════════════════════
+// ══ Manual Add ════════════════════════════════════════════
 function addEntry(){
-  const msg   = document.getElementById('form-msg');
-  const party = document.getElementById('f-party').value.trim();
-  const inv   = document.getElementById('f-inv').value.trim();
-  const date  = document.getElementById('f-date').value;
-  if(!party||!inv||!date){ msg.style.color='var(--red)'; msg.textContent='Fill Date, Invoice No., and Party Name.'; return; }
-
-  const taxable     = parseFloat(document.getElementById('f-taxable').value)||0;
-  const tax         = parseFloat(document.getElementById('f-tax').value)||0;
-  const total       = taxable + tax;
-  const tds         = parseFloat(document.getElementById('f-tds').value)||0;
-  const creditDays  = parseInt(document.getElementById('f-credit-days').value)||0;
-  const advance     = parseFloat(document.getElementById('f-advance').value)||0;
-  const payment     = parseFloat(document.getElementById('f-payment').value)||0;
-
-  const data = load();
-  const entry = {
-    id: Date.now(), sr: data.length+1, date, party, 
-    gstin:       document.getElementById('f-gstin').value.trim(),
-    invoice_no:  inv, taxable, tax, total, tds,
-    credit_days: creditDays,
-    due_date:    document.getElementById('f-due').value || '',
-    advance, payment,
-    net_due:     Math.max(0, total-tds-advance-payment),
-    status:      document.getElementById('f-status').value
-  };
-  data.push(entry); save(data);
-  msg.style.color='var(--green)';
-  msg.textContent=`✓ Entry #${entry.sr} saved — ${party} (${inv}) · Net Due: ${fmt(entry.net_due)}`;
-  ['f-party','f-gstin','f-inv','f-taxable','f-tax','f-total','f-tds','f-credit-days','f-due','f-advance','f-payment','f-net-due'].forEach(id=>{
-    const el=document.getElementById(id); if(el){el.value=''; el.className='';}
+  const msg=document.getElementById('form-msg');
+  const party=document.getElementById('f-party').value.trim();
+  const inv=document.getElementById('f-inv').value.trim();
+  const date=document.getElementById('f-date').value;
+  if(!party||!inv||!date){msg.style.color='var(--red)';msg.textContent='Fill Date, Invoice No., and Party Name.';return;}
+  const tx=parseFloat(document.getElementById('f-taxable').value)||0;
+  const t=parseFloat(document.getElementById('f-tax').value)||0;
+  const total=tx+t;
+  const tds=parseFloat(document.getElementById('f-tds').value)||0;
+  const adv=parseFloat(document.getElementById('f-advance').value)||0;
+  const pay=parseFloat(document.getElementById('f-payment').value)||0;
+  const data=load();
+  data.push({
+    id:Date.now(), sr:data.length+1, date, party,
+    gstin:document.getElementById('f-gstin').value.trim(),
+    invoice_no:inv, taxable:tx, tax:t, total,tds,
+    credit_days:parseInt(document.getElementById('f-cdays').value)||0,
+    due_date:document.getElementById('f-due').value||'',
+    advance:adv, payment:pay,
+    net_due:Math.max(0,total-tds-adv-pay),
+    status:document.getElementById('f-status').value
   });
+  save(data);
+  msg.style.color='var(--green)';msg.textContent=`✓ Saved — ${party} (${inv})`;
+  ['f-party','f-gstin','f-inv','f-taxable','f-tax','f-total','f-tds','f-cdays','f-due','f-advance','f-payment','f-netdue'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.className='';}});
   document.getElementById('f-status').value='Pending';
-  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-  updateHeader();
-  setTimeout(()=>msg.textContent='', 6000);
+  document.getElementById('f-date').value=tod();
+  updateHeader(); setTimeout(()=>msg.textContent='',5000);
 }
 
-// ══ Delete ════════════════════════════════════════════════
+// ══ Excel Upload ══════════════════════════════════════════
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file=e.dataTransfer.files[0]; if(file) handleFile(file);
+}
+
+function handleFile(file){
+  if(!file) return;
+  const okEl=document.getElementById('upload-ok');
+  const errEl=document.getElementById('upload-err');
+  okEl.style.display='none'; errEl.style.display='none';
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      let rows=[];
+      const name=file.name.toLowerCase();
+
+      if(name.endsWith('.csv')){
+        rows=parseCSV(e.target.result);
+      } else {
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        // Try "Invoice Data" sheet first, else first sheet
+        const sheetName=wb.SheetNames.includes('Invoice Data')?'Invoice Data':wb.SheetNames[0];
+        const ws=wb.Sheets[sheetName];
+        rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      }
+
+      if(!rows.length){errEl.style.display='block';errEl.textContent='No data found in file.';return;}
+
+      const parsed=parseRows(rows);
+      if(!parsed.length){errEl.style.display='block';errEl.textContent='Could not read data. Make sure you\'re using the provided template. Required columns: Invoice Date, Party Name, Invoice No';return;}
+
+      // Merge with existing (append)
+      const existing=load();
+      const startSr=existing.length+1;
+      parsed.forEach((e,i)=>{ e.id=Date.now()+i; e.sr=startSr+i; });
+      const merged=[...existing,...parsed];
+      save(merged); updateHeader();
+
+      okEl.style.display='block';
+      okEl.innerHTML=`✓ Successfully imported <strong>${parsed.length} entries</strong> from <strong>${file.name}</strong>. Total entries: ${merged.length}. <a href="#" onclick="document.querySelector('.tb:nth-child(4)').click();return false" style="color:var(--green);font-weight:700">→ Open CEO Dashboard</a>`;
+      document.getElementById('file-inp').value='';
+    } catch(err){
+      errEl.style.display='block';
+      errEl.textContent='Error reading file: '+err.message;
+    }
+  };
+  if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+// ── Parse rows from Excel/CSV ──────────────────────────────
+function parseRows(rows){
+  // Map flexible column names to internal keys
+  const colMap={
+    'invoice date':   'date',     'date':'date',
+    'party name':     'party',    'party':'party',
+    'gstin':          'gstin',
+    'invoice no':     'invoice_no','invoice no *':'invoice_no','invoice':'invoice_no','invoice no.':'invoice_no',
+    'taxable amt (₹)':'taxable',  'taxable amt':'taxable','taxable':'taxable','taxable amount':'taxable',
+    'tax / gst (₹)':  'tax',      'tax/gst (₹)':'tax','tax':'tax','gst':'tax','tax / gst':'tax',
+    'total (₹) auto': 'total',    'total (₹)':'total','total':'total',
+    'tds (₹)':        'tds',      'tds':'tds',
+    'credit days':    'credit_days',
+    'due date':       'due_date', 'due date auto':'due_date',
+    'advance paid (₹)':'advance', 'advance paid':'advance','advance':'advance',
+    'payment recd (₹)':'payment', 'payment recd':'payment','payment received':'payment','payment':'payment',
+    'net due (₹) auto':'net_due', 'net due (₹)':'net_due','net due':'net_due',
+    'status':         'status',
+    'notes':          'notes',
+    'sr no':          'sr_orig',  '#':'sr_orig'
+  };
+
+  const results=[];
+  rows.forEach(row=>{
+    const mapped={};
+    Object.entries(row).forEach(([k,v])=>{
+      const key=(k||'').toString().toLowerCase().trim().replace(/\*/g,'').trim();
+      const mapped_key=colMap[key];
+      if(mapped_key) mapped[mapped_key]=v;
+    });
+
+    // Skip empty rows
+    if(!mapped.party && !mapped.invoice_no) return;
+    const party=(mapped.party||'').toString().trim();
+    const inv=(mapped.invoice_no||'').toString().trim();
+    if(!party||!inv) return;
+
+    // Parse date
+    let dateStr='';
+    if(mapped.date){
+      const d=mapped.date;
+      if(d instanceof Date){ dateStr=d.toISOString().split('T')[0]; }
+      else {
+        const ds=String(d).trim();
+        // Try DD/MM/YYYY
+        const dm=ds.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if(dm){ const[,dd,mm,yyyy]=dm; dateStr=`${yyyy.length===2?'20'+yyyy:yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+        else if(ds.match(/^\d{4}-\d{2}-\d{2}/)){ dateStr=ds.slice(0,10); }
+        else if(!isNaN(Number(ds))){ // Excel serial
+          const jsDate=new Date((Number(ds)-25569)*86400000);
+          dateStr=jsDate.toISOString().split('T')[0];
+        }
+      }
+    }
+
+    const taxable=parseFloat(mapped.taxable)||0;
+    const tax=parseFloat(mapped.tax)||0;
+    const total=mapped.total?parseFloat(mapped.total)||0:taxable+tax;
+    const tds=parseFloat(mapped.tds)||0;
+    const creditDays=parseInt(mapped.credit_days)||0;
+    const advance=parseFloat(mapped.advance)||0;
+    const payment=parseFloat(mapped.payment)||0;
+
+    // Due date
+    let dueDate=mapped.due_date?String(mapped.due_date).trim():'';
+    if(!dueDate&&dateStr&&creditDays>0){
+      const dd=new Date(dateStr); dd.setDate(dd.getDate()+creditDays);
+      dueDate=dd.toISOString().split('T')[0];
+    } else if(dueDate instanceof Date){
+      dueDate=dueDate.toISOString().split('T')[0];
+    } else if(dueDate&&!isNaN(Number(dueDate))){
+      const dd=new Date((Number(dueDate)-25569)*86400000);
+      dueDate=dd.toISOString().split('T')[0];
+    }
+
+    const nd=Math.max(0,total-tds-advance-payment);
+    let status=(mapped.status||'Pending').toString().trim();
+    if(!['Pending','Advance Paid','Partial','Paid'].includes(status)) status='Pending';
+
+    results.push({
+      id:0, sr:0, date:dateStr, party, gstin:(mapped.gstin||'').toString().trim(),
+      invoice_no:inv, taxable, tax, total, tds, credit_days:creditDays,
+      due_date:dueDate, advance, payment, net_due:nd, status,
+      notes:(mapped.notes||'').toString().trim()
+    });
+  });
+  return results;
+}
+
+function parseCSV(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(lines.length<2) return [];
+  const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+  return lines.slice(1).map(line=>{
+    const vals=line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||[];
+    const obj={};
+    headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/"/g,'').trim(); });
+    return obj;
+  }).filter(r=>Object.values(r).some(v=>v));
+}
+
+// ══ Delete / Status ═══════════════════════════════════════
 function delEntry(id){
-  if(!confirm('Delete this entry permanently?')) return;
-  let d = load().filter(e=>e.id!==id);
-  d.forEach((e,i)=>e.sr=i+1);
-  save(d); renderLedger(); updateHeader();
+  if(!confirm('Delete this entry?')) return;
+  let d=load().filter(e=>e.id!==id);
+  d.forEach((e,i)=>e.sr=i+1); save(d); renderLedger(); updateHeader();
+}
+function updStatus(id,val){
+  const d=load(); const e=d.find(x=>x.id===id);
+  if(e){e.status=val;save(d);updateBadge(d);}
+}
+function clearAll(){
+  if(!confirm('Delete ALL entries? This cannot be undone.')) return;
+  save([]); renderLedger(); updateHeader();
 }
 
-// ══ Update status ════════════════════════════════════════
-function updStatus(id, val){
-  const d = load(); const e = d.find(x=>x.id===id);
-  if(e){ e.status=val; save(d); updateBadge(d); }
-}
-
-// ══ Render Ledger ════════════════════════════════════════
+// ══ Render Ledger ═════════════════════════════════════════
 function renderLedger(){
-  const data = load();
-  const el   = document.getElementById('ledger-body');
-  if(!data.length){ el.innerHTML='<div class="em">No entries yet. Add your first invoice.</div>'; return; }
+  const data=load(); const el=document.getElementById('ledger-body');
+  if(!data.length){el.innerHTML='<div class="em">No entries. Upload a sheet or add manually.</div>';return;}
   const today=new Date(); today.setHours(0,0,0,0);
   let sT=0,sX=0,sTo=0,sTDS=0,sAdv=0,sPay=0,sNet=0;
-  const rows = data.map(e=>{
+  const rows=data.map(e=>{
     const n=netDue(e);
     const dd=parseD(e.due_date); const ov=dd&&dd<today&&e.status!=='Paid';
-    sT+=e.taxable||0; sX+=e.tax||0; sTo+=e.total||0; sTDS+=e.tds||0;
-    sAdv+=e.advance||0; sPay+=e.payment||0; sNet+=n;
-    const sc = e.status==='Paid'?'var(--green)':e.status==='Advance Paid'?'var(--blue)':e.status==='Partial'?'var(--amber)':'var(--red)';
-    const tagCls = e.status==='Paid'?'paid':e.status==='Advance Paid'?'advance':e.status==='Partial'?'partial':'pending';
-    return `<tr class="${ov?'ovd':''}">
-      <td>${e.sr}</td>
-      <td>${fmtD(e.date)}</td>
+    sT+=e.taxable||0;sX+=e.tax||0;sTo+=e.total||0;sTDS+=e.tds||0;sAdv+=e.advance||0;sPay+=e.payment||0;sNet+=n;
+    const sc=e.status==='Paid'?'var(--green)':e.status==='Advance Paid'?'var(--blue)':e.status==='Partial'?'var(--amber)':'var(--red)';
+    return`<tr class="${ov?'ovd':''}">
+      <td>${e.sr}</td><td>${fmtD(e.date)}</td>
       <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.party}">${e.party}</td>
       <td style="font-size:10px;color:var(--muted)">${e.gstin||'—'}</td>
       <td>${e.invoice_no}</td>
-      <td class="num">${fmt(e.taxable)}</td>
-      <td class="num">${fmt(e.tax)}</td>
+      <td class="num">${fmt(e.taxable)}</td><td class="num">${fmt(e.tax)}</td>
       <td class="num" style="font-weight:700">${fmt(e.total)}</td>
       <td class="num" style="color:var(--amber)">${fmt(e.tds)}</td>
       <td style="text-align:center">${e.credit_days?e.credit_days+'d':'—'}</td>
@@ -481,18 +644,16 @@ function renderLedger(){
       <td class="num" style="color:var(--blue)">${fmt(e.advance)}</td>
       <td class="num" style="color:var(--green)">${fmt(e.payment)}</td>
       <td class="num" style="font-weight:700;color:${n>0?'var(--red)':'var(--green)'}">${fmt(n)}</td>
-      <td>
-        <select class="st-sel" style="color:${sc}" onchange="updStatus(${e.id},this.value)">
-          <option${e.status==='Pending'?' selected':''} value="Pending">Pending</option>
-          <option${e.status==='Advance Paid'?' selected':''} value="Advance Paid">Advance Paid</option>
-          <option${e.status==='Partial'?' selected':''} value="Partial">Partial</option>
-          <option${e.status==='Paid'?' selected':''} value="Paid">Paid</option>
-        </select>
-      </td>
-      <td><button class="del-btn" onclick="delEntry(${e.id})" title="Delete">✕</button></td>
+      <td><select class="st-sel" style="color:${sc}" onchange="updStatus(${e.id},this.value)">
+        <option${e.status==='Pending'?' selected':''} value="Pending">Pending</option>
+        <option${e.status==='Advance Paid'?' selected':''} value="Advance Paid">Advance Paid</option>
+        <option${e.status==='Partial'?' selected':''} value="Partial">Partial</option>
+        <option${e.status==='Paid'?' selected':''} value="Paid">Paid</option>
+      </select></td>
+      <td><button class="del-btn" onclick="delEntry(${e.id})">✕</button></td>
     </tr>`;
   }).join('');
-  el.innerHTML = `<div class="tbl-wrap"><table>
+  el.innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr>
       <th>#</th><th>Date</th><th>Party</th><th>GSTIN</th><th>Invoice</th>
       <th class="num">Taxable</th><th class="num">Tax</th><th class="num">Total</th>
@@ -502,10 +663,9 @@ function renderLedger(){
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="5">Totals — ${data.length} entr${data.length===1?'y':'ies'}</td>
+      <td colspan="5">Totals — ${data.length} entries</td>
       <td class="num">${fmt(sT)}</td><td class="num">${fmt(sX)}</td><td class="num">${fmt(sTo)}</td>
-      <td class="num" style="color:var(--amber)">${fmt(sTDS)}</td>
-      <td colspan="2"></td>
+      <td class="num" style="color:var(--amber)">${fmt(sTDS)}</td><td colspan="2"></td>
       <td class="num" style="color:var(--blue)">${fmt(sAdv)}</td>
       <td class="num" style="color:var(--green)">${fmt(sPay)}</td>
       <td class="num" style="color:var(--red)">${fmt(sNet)}</td>
@@ -516,78 +676,100 @@ function renderLedger(){
 
 // ══ Render CEO Dashboard ══════════════════════════════════
 function renderCEO(){
-  const data = filterData(load());
-  const el   = document.getElementById('ceo-body');
-  const now  = new Date();
-  document.getElementById('print-meta').textContent =
+  const data=filterData(load()); const el=document.getElementById('ceo-body');
+  const now=new Date();
+  document.getElementById('print-meta').textContent=
     `${now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})} · ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${data.length} entries`;
-
-  if(!data.length){ el.innerHTML='<div class="em">No data for this period.</div>'; return; }
+  if(!data.length){el.innerHTML='<div class="em">No data for selected period.</div>';return;}
 
   const today=new Date(); today.setHours(0,0,0,0);
   let tInv=0,tTDS=0,tAdv=0,tPay=0;
   let paidA=0,advA=0,partA=0,pendA=0,paidC=0,advC=0,partC=0,pendC=0,ovAmt=0;
-  const ovList=[], pm={};
+  const ovList=[],pm={};
 
   data.forEach(e=>{
-    const n=netDue(e), tot=e.total||0, tds=e.tds||0, adv=e.advance||0, pay=e.payment||0;
-    tInv+=tot; tTDS+=tds; tAdv+=adv; tPay+=pay;
+    const n=netDue(e),tot=e.total||0,tds=e.tds||0,adv=e.advance||0,pay=e.payment||0;
+    tInv+=tot;tTDS+=tds;tAdv+=adv;tPay+=pay;
     if(e.status==='Paid'){paidA+=tot;paidC++;}
     else if(e.status==='Advance Paid'){advA+=n;advC++;}
     else if(e.status==='Partial'){partA+=n;partC++;}
     else{pendA+=n;pendC++;}
     const dd=parseD(e.due_date);
-    if(e.status!=='Paid'&&dd){ dd.setHours(0,0,0,0); if(dd<today){ const dOv=Math.floor((today-dd)/86400000); ovAmt+=n; ovList.push({...e,n,dOv}); } }
+    if(e.status!=='Paid'&&dd){dd.setHours(0,0,0,0);if(dd<today){const dOv=Math.floor((today-dd)/86400000);ovAmt+=n;ovList.push({...e,n,dOv});}}
     if(!pm[e.party])pm[e.party]={inv:0,out:0,adv:0,count:0};
-    pm[e.party].inv+=tot; pm[e.party].out+=n; pm[e.party].adv+=adv; pm[e.party].count++;
+    pm[e.party].inv+=tot;pm[e.party].out+=n;pm[e.party].adv+=adv;pm[e.party].count++;
   });
 
-  const tOut = advA+partA+pendA;
-  const tRecv = tPay + tAdv + tTDS;
-  const cRate = tInv>0?Math.round(tRecv/tInv*100):0;
-  const crClass = cRate<50?'red':cRate<75?'amber':'green';
+  const tOut=advA+partA+pendA;
+  const tSettled=tPay+tAdv+tTDS;
+  const cRate=tInv>0?Math.round(tSettled/tInv*100):0;
+  const crClass=cRate<50?'red':cRate<75?'amber':'green';
 
-  // CEO Alerts
+  // PAYABLE breakdown by urgency
+  const overduePayable=ovAmt;
+  const pendingPayable=pendA-overduePayable; // pending but not yet overdue
+  const partialPayable=partA;
+
   const alerts=[];
-  if(ovList.length) alerts.push(`${ovList.length} invoice${ovList.length>1?'s':''} past due date — ${fmt(ovAmt)} uncollected`);
-  ovList.filter(e=>e.dOv>30).forEach(e=>alerts.push(`${e.party} | ${e.invoice_no} — overdue by ${e.dOv} days (${fmt(e.n)} still due)`));
-  data.filter(e=>e.status==='Advance Paid').forEach(e=>alerts.push(`Advance paid, goods pending: ${e.party} | ${e.invoice_no} — ${fmt(e.advance)} advance, due date ${fmtD(e.due_date)}`));
-  data.filter(e=>e.status==='Partial'&&(e.total>0)&&((e.advance+e.payment)/e.total<0.1))
-      .forEach(e=>alerts.push(`Very low settlement: ${e.party} | ${e.invoice_no} — only ${fmt(e.advance+e.payment)} of ${fmt(e.total)} settled`));
+  if(ovList.length) alerts.push(`${ovList.length} invoice${ovList.length>1?'s':''} past due — ${fmt(ovAmt)} overdue payable`);
+  ovList.filter(e=>e.dOv>30).forEach(e=>alerts.push(`${e.party} | ${e.invoice_no} — ${e.dOv} days overdue (${fmt(e.n)} due)`));
+  data.filter(e=>e.status==='Advance Paid').forEach(e=>alerts.push(`Advance paid, goods awaited: ${e.party} | ${e.invoice_no} — ${fmt(e.advance)} paid`));
+  data.filter(e=>e.status==='Partial'&&e.total>0&&(e.advance+e.payment)/e.total<0.1).forEach(e=>alerts.push(`Very low payment: ${e.party} | ${e.invoice_no} — only ${fmt(e.advance+e.payment)} of ${fmt(e.total)}`));
 
-  const parties = Object.entries(pm).sort((a,b)=>b[1].out-a[1].out).slice(0,8);
+  const parties=Object.entries(pm).sort((a,b)=>b[1].out-a[1].out).slice(0,8);
+  const ovHTML=ovList.length?`<div class="card">
+    <div class="card-hd">Overdue Detail (${ovList.length})</div>
+    <div class="tbl-wrap"><table style="min-width:500px">
+      <thead><tr><th>Party</th><th>Invoice</th><th class="num">Net Due</th><th>Due Date</th><th class="num">Overdue By</th><th>Status</th></tr></thead>
+      <tbody>${ovList.sort((a,b)=>b.dOv-a.dOv).map(e=>`<tr>
+        <td style="color:var(--red);font-weight:600">${e.party}</td><td>${e.invoice_no}</td>
+        <td class="num" style="font-weight:700">${fmt(e.n)}</td><td>${fmtD(e.due_date)}</td>
+        <td class="num" style="color:var(--red);font-weight:700">${e.dOv}d</td>
+        <td><span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">${e.status}</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`:'';
 
-  const ovHTML = ovList.length ? `
-    <div class="card">
-      <div class="card-hd">Overdue Invoices (${ovList.length})</div>
-      <div class="tbl-wrap"><table style="min-width:520px">
-        <thead><tr><th>Party</th><th>Invoice</th><th class="num">Net Due</th><th>Due Date</th><th class="num">Overdue By</th><th>Status</th></tr></thead>
-        <tbody>${ovList.sort((a,b)=>b.dOv-a.dOv).map(e=>`
-          <tr>
-            <td style="color:var(--red);font-weight:600">${e.party}</td>
-            <td>${e.invoice_no}</td>
-            <td class="num" style="font-weight:700">${fmt(e.n)}</td>
-            <td>${fmtD(e.due_date)}</td>
-            <td class="num" style="color:var(--red);font-weight:700">${e.dOv}d</td>
-            <td><span class="tag ${e.status==='Advance Paid'?'advance':'partial'}">${e.status}</span></td>
-          </tr>`).join('')}
-        </tbody>
-      </table></div>
-    </div>` : '';
+  el.innerHTML=`
+    <!-- ★ PAYABLE BANNER — primary view ★ -->
+    <div class="payable-banner">
+      <div class="payable-main">
+        <div class="payable-label">Total Payable (We Owe)</div>
+        <div class="payable-val">${fmt(tOut)}</div>
+        <div class="payable-sub">${pendC+partC+advC} invoices pending settlement</div>
+      </div>
+      <div class="payable-breakdown">
+        <div class="pb-item">
+          <div class="pb-item-val" style="color:var(--red)">${fmt(overduePayable)}</div>
+          <div class="pb-item-lbl">Overdue</div>
+        </div>
+        <div class="pb-item">
+          <div class="pb-item-val" style="color:var(--amber)">${fmt(partialPayable)}</div>
+          <div class="pb-item-lbl">Pending</div>
+        </div>
+        <div class="pb-item">
+          <div class="pb-item-val" style="color:var(--blue)">${fmt(advA)}</div>
+          <div class="pb-item-lbl">Advance Paid</div>
+        </div>
+        <div class="pb-item">
+          <div class="pb-item-val" style="color:var(--amber)">${fmt(partialPayable>0?partA:0)}</div>
+          <div class="pb-item-lbl">Partial</div>
+        </div>
+      </div>
+    </div>
 
-  el.innerHTML = `
     <div class="metrics">
       <div class="mc blue"><div class="mc-label">Total Invoiced</div><div class="mc-val">${fmt(tInv)}</div><div class="mc-sub">${data.length} invoices</div></div>
-      <div class="mc green"><div class="mc-label">Total Settled</div><div class="mc-val">${fmt(tRecv)}</div><div class="mc-sub">adv + payment + TDS</div></div>
-      <div class="mc red"><div class="mc-label">Outstanding</div><div class="mc-val">${fmt(tOut)}</div><div class="mc-sub">${pendC+partC+advC} unpaid</div></div>
-      <div class="mc red"><div class="mc-label">Overdue Amount</div><div class="mc-val">${fmt(ovAmt)}</div><div class="mc-sub">${ovList.length} past due</div></div>
-      <div class="mc blue"><div class="mc-label">Advance Paid</div><div class="mc-val">${fmt(tAdv)}</div><div class="mc-sub">${advC} pending delivery</div></div>
+      <div class="mc green"><div class="mc-label">Total Settled</div><div class="mc-val">${fmt(tSettled)}</div><div class="mc-sub">${paidC} fully paid</div></div>
+      <div class="mc red"><div class="mc-label">Still Payable</div><div class="mc-val">${fmt(tOut)}</div><div class="mc-sub">${pendC+partC+advC} invoices</div></div>
+      <div class="mc red"><div class="mc-label">Overdue Payable</div><div class="mc-val">${fmt(ovAmt)}</div><div class="mc-sub">${ovList.length} past due date</div></div>
+      <div class="mc blue"><div class="mc-label">Advance Paid</div><div class="mc-val">${fmt(tAdv)}</div><div class="mc-sub">${advC} awaiting goods</div></div>
       <div class="mc ${crClass}"><div class="mc-label">Settlement Rate</div><div class="mc-val">${cRate}%</div><div class="mc-sub">${cRate<50?'Critical':cRate<75?'Monitor':'Healthy'}</div></div>
     </div>
 
     <div class="charts-row">
       <div class="chart-box">
-        <div class="chart-title">Invoice status breakdown</div>
+        <div class="chart-title">Payable breakdown</div>
         <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
       </div>
       <div class="chart-box">
@@ -598,14 +780,13 @@ function renderCEO(){
 
     <div class="card">
       <div class="card-hd">${alerts.length?`⚠ CEO Alerts (${alerts.length})`:'All Clear'}</div>
-      ${alerts.length ? alerts.map(a=>`<div class="alert">${a}</div>`).join('')
-        : `<div class="all-ok">✓ No overdue, suspicious entries, or pending deliveries for this period.</div>`}
+      ${alerts.length?alerts.map(a=>`<div class="alert-box">${a}</div>`).join(''):`<div class="all-ok">✓ No overdue or suspicious entries for this period.</div>`}
     </div>
 
     <div class="card">
       <div class="card-hd">Settlement Breakdown</div>
       <div class="pb-row"><span class="pb-label">Fully Paid (${paidC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(paidA/tInv*100):0}%;background:var(--green)"></div></div><span class="pb-amt" style="color:var(--green)">${fmt(paidA)}</span></div>
-      <div class="pb-row"><span class="pb-label">Adv. Paid (${advC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(advA/tInv*100):0}%;background:var(--blue)"></div></div><span class="pb-amt" style="color:var(--blue)">${fmt(advA)}</span></div>
+      <div class="pb-row"><span class="pb-label">Advance (${advC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(advA/tInv*100):0}%;background:var(--blue)"></div></div><span class="pb-amt" style="color:var(--blue)">${fmt(advA)}</span></div>
       <div class="pb-row"><span class="pb-label">Partial (${partC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(partA/tInv*100):0}%;background:var(--amber)"></div></div><span class="pb-amt" style="color:var(--amber)">${fmt(partA)}</span></div>
       <div class="pb-row"><span class="pb-label">Pending (${pendC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(pendA/tInv*100):0}%;background:var(--red)"></div></div><span class="pb-amt" style="color:var(--red)">${fmt(pendA)}</span></div>
     </div>
@@ -613,108 +794,136 @@ function renderCEO(){
     ${ovHTML}
 
     <div class="card">
-      <div class="card-hd">Party-wise Outstanding</div>
-      ${parties.map(([name,p])=>`
-        <div class="party-row">
-          <div>
-            <div class="party-name">${name}</div>
-            <div class="party-meta">${p.count} invoice${p.count>1?'s':''} · Invoiced ${fmt(p.inv)}${p.adv>0?' · Advance: '+fmt(p.adv):''}</div>
-          </div>
-          <div class="party-out" style="color:${p.out>0?'var(--red)':'var(--green)'}">${fmt(p.out)}</div>
-        </div>`).join('')}
+      <div class="card-hd">Party-wise Payable</div>
+      ${parties.map(([name,p])=>`<div class="party-row">
+        <div>
+          <div class="party-name">${name}</div>
+          <div class="party-meta">${p.count} invoice${p.count>1?'s':''} · Total ${fmt(p.inv)}${p.adv>0?' · Advance: '+fmt(p.adv):''}</div>
+        </div>
+        <div class="party-out" style="color:${p.out>0?'var(--red)':'var(--green)'}">${fmt(p.out)}</div>
+      </div>`).join('')}
     </div>
 
     <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">
       Auto-generated · ${data.length} entries · Cannot be manually altered
     </div>`;
 
-  setTimeout(()=>drawCharts(paidA,advA,partA,pendA,parties), 60);
+  setTimeout(()=>drawCharts(paidA,advA,partA,pendA,parties),60);
 }
 
 // ══ Charts ════════════════════════════════════════════════
 function drawCharts(paidA,advA,partA,pendA,parties){
   if(pieChart){pieChart.destroy();pieChart=null;}
   if(barChart){barChart.destroy();barChart=null;}
-  const pieCtx=document.getElementById('pieChart');
-  const barCtx=document.getElementById('barChart');
-  if(!pieCtx||!barCtx) return;
+  const pCtx=document.getElementById('pieChart');
+  const bCtx=document.getElementById('barChart');
+  if(!pCtx||!bCtx) return;
   const font={family:"'Segoe UI',system-ui,sans-serif",size:12};
-  pieChart=new Chart(pieCtx,{
+  pieChart=new Chart(pCtx,{
     type:'doughnut',
-    data:{
-      labels:['Paid','Advance Paid','Partial','Pending'],
-      datasets:[{
-        data:[Math.round(paidA),Math.round(advA),Math.round(partA),Math.round(pendA)],
-        backgroundColor:['#059669','#2563eb','#d97706','#dc2626'],
-        borderColor:'#fff',borderWidth:3,hoverOffset:8
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,cutout:'66%',
-      plugins:{
-        legend:{position:'bottom',labels:{font,padding:12,usePointStyle:true,boxWidth:10}},
-        tooltip:{callbacks:{label:c=>`${c.label}: ₹${c.raw.toLocaleString('en-IN')}`}}
-      }
-    }
+    data:{labels:['Paid','Advance Paid','Partial','Pending'],
+      datasets:[{data:[Math.round(paidA),Math.round(advA),Math.round(partA),Math.round(pendA)],
+        backgroundColor:['#059669','#2563EB','#D97706','#DC2626'],
+        borderColor:'#fff',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'66%',
+      plugins:{legend:{position:'bottom',labels:{font,padding:12,usePointStyle:true,boxWidth:10}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ₹${c.raw.toLocaleString('en-IN')}`}}}}
   });
   const top=parties.slice(0,6);
-  barChart=new Chart(barCtx,{
+  barChart=new Chart(bCtx,{
     type:'bar',
-    data:{
-      labels:top.map(([n])=>n.length>13?n.slice(0,12)+'…':n),
-      datasets:[{
-        data:top.map(([,p])=>Math.round(p.out)),
-        backgroundColor:top.map(([,p])=>p.out>0?'rgba(220,38,38,.8)':'rgba(5,150,105,.8)'),
-        borderRadius:6,borderSkipped:false
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
+    data:{labels:top.map(([n])=>n.length>13?n.slice(0,12)+'…':n),
+      datasets:[{data:top.map(([,p])=>Math.round(p.out)),
+        backgroundColor:top.map(([,p])=>p.out>0?'rgba(220,38,38,.82)':'rgba(5,150,105,.82)'),
+        borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`₹${c.raw.toLocaleString('en-IN')}`}}},
-      scales:{
-        x:{grid:{display:false},ticks:{font,color:'#6b7280',maxRotation:30}},
-        y:{grid:{color:'#f3f4f6'},ticks:{font,color:'#6b7280',callback:v=>'₹'+Number(v).toLocaleString('en-IN')}}
-      }
-    }
+      scales:{x:{grid:{display:false},ticks:{font,color:'#6B7280',maxRotation:30}},
+        y:{grid:{color:'#F3F4F6'},ticks:{font,color:'#6B7280',callback:v=>'₹'+Number(v).toLocaleString('en-IN')}}}}
   });
 }
 
 // ══ CSV Export ════════════════════════════════════════════
 function exportCSV(){
-  const data=load();
-  if(!data.length){alert('No data to export.');return;}
+  const data=load(); if(!data.length){alert('No data.');return;}
   const keys=['sr','date','party','gstin','invoice_no','taxable','tax','total','tds','credit_days','due_date','advance','payment','net_due','status'];
-  const labels=['Sr','Date','Party','GSTIN','Invoice','Taxable','Tax','Total','TDS','Credit Days','Due Date','Advance Paid','Payment Recd','Net Due','Status'];
+  const labels=['Sr','Date','Party','GSTIN','Invoice','Taxable','Tax','Total','TDS','Credit Days','Due Date','Advance','Payment','Net Due','Status'];
   const rows=data.map(e=>keys.map(k=>{const v=e[k]??'';return String(v).includes(',')?`"${v}"`:v;}).join(','));
   const blob=new Blob([[labels.join(','),...rows].join('\n')],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`invoices_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  a.download=`invoices_${tod()}.csv`;a.click();
 }
 
-// ══ Backup & Restore ══════════════════════════════════════
+// ══ Backup / Restore ══════════════════════════════════════
 function backupData(){
   const data=load();
-  const backup={version:4,exported:new Date().toISOString(),count:data.length,data};
-  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({v:5,date:new Date().toISOString(),count:data.length,data},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`invoice_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();
+  a.download=`invoice_backup_${tod()}.json`;a.click();
 }
-
-function restoreData(input){
-  const file=input.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
+function restoreData(inp){
+  const file=inp.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
     try{
-      const backup=JSON.parse(e.target.result);
-      const rows=backup.data||backup;
-      if(!Array.isArray(rows)){alert('Invalid backup file.');return;}
-      if(!confirm(`Restore ${rows.length} entries? This will REPLACE current data.`))return;
-      save(rows); updateHeader();
-      alert(`✓ Restored ${rows.length} entries successfully.`);
+      const b=JSON.parse(e.target.result);
+      const rows=b.data||b;
+      if(!Array.isArray(rows)){alert('Invalid backup.');return;}
+      if(!confirm(`Restore ${rows.length} entries? Current data will be replaced.`))return;
+      save(rows); updateHeader(); alert(`✓ Restored ${rows.length} entries.`);
     }catch(err){alert('Invalid file: '+err.message);}
   };
-  reader.readAsText(file);
-  input.value='';
+  r.readAsText(file); inp.value='';
+}
+
+// ══ Template Download ═════════════════════════════════════
+function downloadTemplate(){
+  // Embedded as data URL — SheetJS generates XLSX on the fly
+  const wb=XLSX.utils.book_new();
+  const headers=['Invoice Date *','Party Name *','GSTIN','Invoice No *','Taxable Amt (₹)','Tax / GST (₹)','Total (₹) AUTO','TDS (₹)','Credit Days','Due Date AUTO','Advance Paid (₹)','Payment Recd (₹)','Net Due (₹) AUTO','Status','Notes'];
+  const sampleRows=[
+    ['15/03/2026','Rajesh Traders Pvt Ltd','22AAAAA0000A1Z5','INV-001',10000,1800,11800,0,30,'','2000','','','Partial','First order'],
+    ['16/03/2026','Kumar Suppliers','','INV-002',25000,4500,29500,295,45,'','','','','Pending',''],
+    ['','','','','','','','','','','','','','',''],
+  ];
+  const wsData=[headers,...sampleRows];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  // Column widths
+  ws['!cols']=[{wch:15},{wch:30},{wch:20},{wch:15},{wch:16},{wch:14},{wch:15},{wch:12},{wch:12},{wch:15},{wch:18},{wch:18},{wch:16},{wch:18},{wch:25}];
+  XLSX.utils.book_append_sheet(wb,ws,'Invoice Data');
+
+  // Instructions sheet
+  const inst=[
+    ['INVOICE TRACKER — TEMPLATE INSTRUCTIONS'],[''],
+    ['YELLOW COLUMNS — Fill these','',''],
+    ['Invoice Date *','Date of invoice','Format: DD/MM/YYYY'],
+    ['Party Name *','Supplier/Customer name','Required'],
+    ['GSTIN','GST number','Optional'],
+    ['Invoice No *','Invoice number','e.g. INV-001'],
+    ['Taxable Amt (₹)','Base amount before tax','Numbers only'],
+    ['Tax / GST (₹)','GST amount','Numbers only'],
+    ['TDS (₹)','Tax deducted at source','0 if none'],
+    ['Credit Days','Days to pay e.g. 30','Due date auto-calculates'],
+    ['Advance Paid (₹)','Paid before receiving goods','0 if none'],
+    ['Payment Recd (₹)','Received from party after invoice','0 if none'],
+    ['Status','Dropdown','Pending / Advance Paid / Partial / Paid'],
+    [''],
+    ['GREEN COLUMNS — Do not fill, auto-calculated','',''],
+    ['Total (₹)','= Taxable + Tax','Auto'],
+    ['Due Date','= Invoice Date + Credit Days','Auto'],
+    ['Net Due','= Total - TDS - Advance - Payment','Auto'],
+    [''],
+    ['UPLOAD STEPS','',''],
+    ['1','Fill this sheet','Only yellow columns needed'],
+    ['2','Save the file','Keep as .xlsx or save as .csv'],
+    ['3','Upload to tracker','Click Upload Sheet on the website'],
+    ['4','Dashboard ready','CEO Dashboard auto-builds instantly'],
+  ];
+  const ws2=XLSX.utils.aoa_to_sheet(inst);
+  ws2['!cols']=[{wch:25},{wch:35},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Instructions');
+
+  XLSX.writeFile(wb,'invoice_template.xlsx');
 }
 
 // ══ Print PDF ═════════════════════════════════════════════
