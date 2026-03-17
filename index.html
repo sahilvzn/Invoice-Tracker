@@ -1,762 +1,168 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FinTrack — Personal CFO (MVP)</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-:root{
-  --bg:#F5F3EF; --surface:#FFFFFF; --muted:#6B6B6B; --ink:#1B1B1B;
-  --accent:#92601A; --accent-weak:#F6EEE0; --danger:#B5341A; --danger-weak:#FFF1F0;
-  --green:#2D6A4F; --green-weak:#EAF4EF;
-  --radius:12px; --r-sm:8px; --mono:'JetBrains Mono', monospace;
-  --ff: 'Plus Jakarta Sans', system-ui, sans-serif;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family:var(--ff);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px}
-.app{display:flex;height:100vh;overflow:hidden}
-.sidebar{width:240px;background:var(--surface);border-right:1px solid #E8E3DD;display:flex;flex-direction:column;padding:18px;gap:14px}
-.brand{display:flex;align-items:center;gap:12px}
-.brand .logo{width:44px;height:44;border-radius:10px;background:var(--accent-weak);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:18px}
-.brand .title{font-weight:700;font-size:18px}
-.co-pill{background:#FBF8F6;border:1px solid #EFE6DA;padding:10px;border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.co-av{width:36px;height:36;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700}
-.nav{flex:1;display:flex;flex-direction:column;gap:8px;padding-top:6px}
-.nav .item{padding:10px;border-radius:8px;cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:10px}
-.nav .item.on{background:#F7F5F2;color:var(--ink);font-weight:700}
-.footer{display:flex;flex-direction:column;gap:8px;padding-top:6px;border-top:1px solid #EFE6DA}
-
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:60px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #E8E3DD}
-.tb-left{display:flex;align-items:center;gap:12px}
-.tb-title{font-weight:700;font-size:18px}
-.tb-actions{display:flex;gap:8px;align-items:center}
-.btn{background:#fff;border:1px solid #E7E1D8;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.container{padding:20px;overflow:auto;flex:1}
-
-/* dashboard pieces */
-.hero{background:var(--surface);border:1px solid #E8E3DD;border-radius:var(--radius);padding:22px;display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
-.hero .left{max-width:60%}
-.hero .label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase}
-.hero .val{font-size:36px;font-weight:800;margin-top:6px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.kcard{background:var(--surface);border:1px solid #E8E3DD;border-radius:12px;padding:14px}
-.kcard .num{font-weight:800;font-size:18px}
-.grid-2{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px}
-.charts{background:var(--surface);border:1px solid #E8E3DD;border-radius:12px;padding:14px}
-
-/* ledger table */
-.table-wrap{background:var(--surface);border-radius:12px;border:1px solid #E8E3DD;padding:12px;overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead th{background:#FBF8F6;padding:10px;text-align:left;color:var(--muted);font-weight:700;border-bottom:1px solid #EFE6DA;white-space:nowrap}
-tbody td{padding:10px;border-bottom:1px solid #F2EFEB}
-.actions{display:flex;gap:8px}
-
-/* form */
-.form{background:var(--surface);border:1px solid #E8E3DD;border-radius:12px;padding:14px;margin-bottom:16px}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-
-/* small utilities */
-.small{font-size:12px;color:var(--muted)}
-.center{display:flex;align-items:center;justify-content:center}
-.badge{background:var(--danger);color:#fff;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}
-
-/* responsive */
-@media(max-width:960px){.kpis{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FinTrack — Dashboard</title>
+  <style>
+    /* minimal styles for the demo dashboard */
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:#f5f7fb; color:#0f172a; }
+    header{ background:#0b1220; color:#fff; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    header .brand{ font-weight:700; letter-spacing:0.4px; }
+    main{ padding:20px; max-width:1100px; margin:24px auto; }
+    #dashboard{ background:#fff; border-radius:10px; padding:18px; box-shadow:0 6px 18px rgba(8,15,30,0.06); }
+    .controls{ display:flex; gap:10px; align-items:center; }
+    button{ padding:8px 12px; border-radius:8px; border:0; cursor:pointer; background:#1f6feb; color:#fff; font-weight:600; }
+    button.secondary{ background:#e6edf8; color:#0b1220; }
+    .spinner{ display:inline-block; width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,0.2); border-top-color:rgba(255,255,255,0.9); animation:spin 0.9s linear infinite; margin-left:8px; vertical-align:middle; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+    /* make captured area visually distinct */
+    .tile { padding:12px; border-radius:8px; background:linear-gradient(180deg,#fff,#f7fafc); margin-bottom:12px; }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .col { flex:1 1 220px; min-width:200px; }
+    footer{ text-align:center; padding:18px; color:#64748b; font-size:13px; }
+  </style>
 </head>
 <body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="logo" id="logo-initial">F</div>
-      <div>
-        <div class="title">FinTrack</div>
-        <div class="small">Personal CFO</div>
-      </div>
+  <header>
+    <div class="brand">FinTrack</div>
+    <div class="controls">
+      <!-- Download button replaces Print -->
+      <button id="downloadBtn">Download Dashboard</button>
+      <button class="secondary" id="exportCsvBtn">Export CSV</button>
     </div>
+  </header>
 
-    <div class="co-pill" onclick="openRename()">
-      <div class="co-av" id="co-av" style="background:#EDE1D5;color:var(--accent)">Y</div>
-      <div style="flex:1;min-width:0">
-        <div id="co-name" style="font-weight:700">Your Name</div>
-        <div class="small">Financial Workspace</div>
-      </div>
-      <div style="font-size:13px;color:var(--muted)">✎</div>
-    </div>
+  <main>
+    <!-- The dashboard container: only this element will be captured -->
+    <section id="dashboard" aria-label="Dashboard">
+      <h2>Monthly Overview</h2>
 
-    <nav class="nav">
-      <div class="item on" data-p="dashboard" onclick="go(this)">Dashboard</div>
-      <div class="item" data-p="cashflow" onclick="go(this)">Cash Flow</div>
-      <div class="item" data-p="categories" onclick="go(this)">By Category</div>
-      <div class="item" data-p="ledger" onclick="go(this)">All Transactions <span id="due-badge" style="margin-left:auto;display:none" class="badge">0</span></div>
-      <div class="item" data-p="invoices" onclick="go(this)">Invoices & Bills</div>
-      <div class="item" data-p="loans" onclick="go(this)">Loans & EMIs</div>
-      <div class="item" data-p="salary" onclick="go(this)">Salary & Payroll</div>
-      <div class="item" data-p="outstanding" onclick="go(this)">Outstanding</div>
-      <div class="item" data-p="tax" onclick="go(this)">Tax & TDS</div>
-      <div class="item" data-p="add" onclick="go(this)">Add Transaction</div>
-      <div class="item" data-p="upload" onclick="go(this)">Import Sheet</div>
-    </nav>
-
-    <div class="footer">
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="exportCSV()">⬇ CSV</button>
-        <button class="btn" onclick="backupData()">💾 Backup</button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="document.getElementById('file-restore').click()">↑ Restore</button>
-        <input type="file" id="file-restore" style="display:none" accept=".json" onchange="restoreData(this)">
-        <button class="btn" onclick="window.print()">🖨 Print</button>
-      </div>
-    </div>
-  </aside>
-
-  <main class="main">
-    <div class="topbar">
-      <div class="tb-left">
-        <div class="tb-title" id="tb-title">Dashboard</div>
-        <div class="small" id="tb-sub" style="margin-left:12px"></div>
-      </div>
-      <div class="tb-actions">
-        <div class="small">Period</div>
-        <div style="display:flex;gap:6px;margin-left:8px">
-          <button class="btn" onclick="setPeriod('all')">All</button>
-          <button class="btn" onclick="setPeriod('month')">This Month</button>
+      <div class="row">
+        <div class="col tile">
+          <h3>Revenue</h3>
+          <p>₹ 1,25,400</p>
         </div>
-        <button class="btn primary" onclick="quickAdd('debit')" style="margin-left:12px">+ Expense</button>
-        <button class="btn" onclick="quickAdd('credit')">+ Income</button>
-      </div>
-    </div>
-
-    <div class="container" id="container">
-      <!-- panes -->
-      <div id="pane-dashboard">
-        <div class="hero">
-          <div class="left">
-            <div class="label">Net Worth — <span id="period-label">All Time</span></div>
-            <div class="val" id="nw-val">₹0</div>
-            <div class="small" id="nw-sub">0 transactions</div>
-          </div>
-          <div style="text-align:right">
-            <div class="small">Total In</div>
-            <div style="font-weight:800;color:var(--green)"><span id="tot-in">₹0</span></div>
-            <div class="small" style="margin-top:8px">Total Out</div>
-            <div style="font-weight:800;color:var(--danger)"><span id="tot-out">₹0</span></div>
-          </div>
+        <div class="col tile">
+          <h3>Expenses</h3>
+          <p>₹ 66,980</p>
         </div>
-
-        <div class="kpis">
-          <div class="kcard"><div class="small">Income</div><div class="num" id="k-income">₹0</div></div>
-          <div class="kcard"><div class="small">Expenses</div><div class="num" id="k-expense">₹0</div></div>
-          <div class="kcard"><div class="small">EMI Load</div><div class="num" id="k-emi">₹0</div></div>
-          <div class="kcard"><div class="small">Savings Rate</div><div class="num" id="k-save">0%</div></div>
-        </div>
-
-        <div class="grid-2">
-          <div class="charts">
-            <div class="small" style="margin-bottom:8px">Income vs Expense — monthly</div>
-            <div style="height:240px"><canvas id="chart-trend"></canvas></div>
-          </div>
-          <div class="charts">
-            <div class="small" style="margin-bottom:8px">Spending by Category</div>
-            <div style="height:240px"><canvas id="chart-cats"></canvas></div>
-          </div>
-        </div>
-
-        <div class="table-wrap" style="margin-top:12px">
-          <div class="small" style="margin-bottom:8px">Recent Transactions</div>
-          <div id="recent-list"></div>
+        <div class="col tile">
+          <h3>Net</h3>
+          <p>₹ 58,420</p>
         </div>
       </div>
 
-      <div id="pane-add" style="display:none">
-        <div class="form">
-          <div style="font-weight:700;margin-bottom:8px">Add Transaction</div>
-          <div class="form-grid">
-            <div>
-              <label class="small">Date *</label>
-              <input type="date" id="f-date" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-            <div>
-              <label class="small">Type *</label>
-              <select id="f-type" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD">
-                <option value="debit">Expense</option>
-                <option value="credit">Income</option>
-                <option value="transfer">Transfer</option>
-                <option value="loan">Loan / EMI</option>
-                <option value="salary">Salary</option>
-              </select>
-            </div>
-            <div>
-              <label class="small">Amount *</label>
-              <input type="number" id="f-amount" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-            <div>
-              <label class="small">Category</label>
-              <input id="f-category" placeholder="Groceries, Rent, Salary..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-            <div>
-              <label class="small">Party / Vendor *</label>
-              <input id="f-party" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-            <div>
-              <label class="small">Ref / Invoice</label>
-              <input id="f-ref" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
+      <section class="tile">
+        <h3>Recent Transactions</h3>
+        <table style="width:100%; border-collapse:collapse;">
+          <thead style="text-align:left; color:#64748b;">
+            <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>2026-03-10</td><td>Website fee</td><td>-₹ 2,500</td></tr>
+            <tr><td>2026-03-11</td><td>Client Payment</td><td>₹ 55,000</td></tr>
+            <tr><td>2026-03-15</td><td>Stationery</td><td>-₹ 1,200</td></tr>
+          </tbody>
+        </table>
+      </section>
 
-            <div>
-              <label class="small">GST (₹)</label>
-              <input type="number" id="f-gst" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-            <div>
-              <label class="small">TDS (₹)</label>
-              <input type="number" id="f-tds" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-
-            <div>
-              <label class="small">Due Date</label>
-              <input type="date" id="f-due" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-            </div>
-            <div>
-              <label class="small">Status</label>
-              <select id="f-status" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD">
-                <option>Settled</option><option>Pending</option><option>Partial</option><option>Advance Paid</option>
-              </select>
-            </div>
-
-            <div style="grid-column:1/-1">
-              <label class="small">Notes</label>
-              <textarea id="f-notes" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD;min-height:80px"></textarea>
-            </div>
-
-            <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
-              <button class="btn" onclick="resetForm()">Reset</button>
-              <button class="btn primary" onclick="saveEntry()">Save Transaction</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="pane-upload" style="display:none">
-        <div class="form">
-          <div style="font-weight:700;margin-bottom:8px">Import Sheet</div>
-          <div style="margin-bottom:10px" class="small">Download the template, fill with invoices/transactions, and upload here.</div>
-          <div style="display:flex;gap:8px;margin-bottom:10px">
-            <button class="btn" onclick="downloadTemplate()">⬇ Download Template (.xlsx)</button>
-            <button class="btn" onclick="document.getElementById('fu').click()">📂 Choose File</button>
-            <input type="file" id="fu" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
-          </div>
-          <div id="upload-ok" style="display:none;background:var(--green-weak);padding:10px;border-radius:8px;margin-top:8px;color:var(--green)"></div>
-          <div id="upload-err" style="display:none;background:var(--danger-weak);padding:10px;border-radius:8px;margin-top:8px;color:var(--danger)"></div>
-          <div style="margin-top:12px" class="small">Supported columns: Date, Type, Amount, Category, Party, Ref/Invoice, GST, TDS, Due Date, Status</div>
-        </div>
-      </div>
-
-      <div id="pane-ledger" style="display:none">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-          <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
-          <button class="btn" onclick="backupData()">💾 Backup</button>
-          <button class="btn" onclick="renderLedger()">↺ Refresh</button>
-          <button class="btn" onclick="clearAll()" style="margin-left:auto;color:var(--danger);border-color:#F6DEDB">🗑 Clear All</button>
-        </div>
-        <div id="ledger-body" class="table-wrap"></div>
-      </div>
-
-      <!-- other panes (cashflow, invoices, loans, salary, outstanding, tax, categories) can be added similarly -->
-    </div>
+      <p style="font-size:13px;color:#94a3b8;margin-top:10px;">
+        Tip: Use "Download Dashboard" to save a PNG of this dashboard. Data never leaves your device.
+      </p>
+    </section>
   </main>
-</div>
 
-<!-- RENAME MODAL -->
-<div id="modal-rename" style="display:none;position:fixed;inset:0;background:rgba(27,27,27,0.45);align-items:center;justify-content:center">
-  <div style="background:#fff;padding:20px;border-radius:12px;width:360px;box-shadow:0 12px 40px rgba(27,27,27,0.12)">
-    <div style="font-weight:800;margin-bottom:6px">Rename Workspace</div>
-    <input id="rename-inp" style="width:100%;padding:10px;border-radius:8px;border:1px solid #E8E3DD" placeholder="Your full name or company"/>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button class="btn" onclick="closeRename()">Cancel</button>
-      <button class="btn primary" onclick="saveRename()">Save</button>
-    </div>
-  </div>
-</div>
+  <footer>
+    © FinTrack — Local-only export. No external servers used for data.
+  </footer>
 
-<!-- QUICK ADD -->
-<div id="modal-quick" style="display:none;position:fixed;inset:0;background:rgba(27,27,27,0.45);align-items:center;justify-content:center">
-  <div style="background:#fff;padding:18px;border-radius:12px;width:420px">
-    <div style="font-weight:800" id="qa-title">Quick Add</div>
-    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <input id="qa-date" type="date" style="padding:10px;border-radius:8px;border:1px solid #E8E3DD" />
-      <input id="qa-amt" type="number" style="padding:10px;border-radius:8px;border:1px solid #E8E3DD" placeholder="Amount" />
-      <input id="qa-party" style="padding:10px;border-radius:8px;border:1px solid #E8E3DD" placeholder="Party" />
-      <select id="qa-cat" style="padding:10px;border-radius:8px;border:1px solid #E8E3DD">
-        <option>Other</option><option>Salary</option><option>Rent</option><option>Groceries</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button class="btn" onclick="closeQuick()">Cancel</button>
-      <button class="btn primary" onclick="saveQuick()">Save</button>
-    </div>
-  </div>
-</div>
+  <!-- html2canvas: used only to render DOM -> canvas in-browser.
+       For production you can self-host this script instead of CDN. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-<script>
-/* ===========================
-   Storage & helpers
-   =========================== */
-const KEY='fintrack_v1';
-const CK='fintrack_name';
+  <script>
+    // Safe helper to download a Blob as a file on the client
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 
-const load = ()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){return []} };
-const save = d => localStorage.setItem(KEY, JSON.stringify(d));
-const nowISO = ()=>new Date().toISOString().split('T')[0];
-const fmt = n => '₹'+(Math.round(Number(n)||0)).toLocaleString('en-IN');
-const fmtD = d => { if(!d) return '—'; const s=String(d).split('T')[0]; const [y,m,dd]=s.split('-'); return `${dd}/${m}/${y}`; };
-const parseD = d => { if(!d) return null; return new Date(String(d).split('T')[0]); };
-let CURRENT_PANE='dashboard';
-let PERIOD='all';
-let _charts={};
+    // Download only the dashboard element at its full size & device pixel ratio
+    async function downloadDashboard() {
+      const btn = document.getElementById('downloadBtn');
+      const originalHtml = btn.innerHTML;
+      try {
+        // show a spinner to indicate work in progress
+        btn.disabled = true;
+        btn.innerHTML = 'Preparing... <span class="spinner" aria-hidden="true"></span>';
 
-/* company name */
-function loadName(){const n=localStorage.getItem(CK)||'Your Name'; applyName(n); }
-function applyName(name){
-  document.getElementById('co-name').textContent = name;
-  const av=document.getElementById('co-av');
-  av.textContent = initials(name);
-  document.getElementById('logo-initial').textContent = initials(name).slice(0,1);
-  const bgs=['#EDE1D5','#EAF4EF','#EEF3FB','#FDEEEB','#F3EEF9']; const fgs=['#92601A','#2D6A4F','#1E4E8C','#B5341A','#5B3A8A'];
-  const i = (name||'').charCodeAt(0) % bgs.length;
-  av.style.background = bgs[i]; av.style.color = fgs[i];
-}
-function initials(n){ return n.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase(); }
-function openRename(){ document.getElementById('rename-inp').value = document.getElementById('co-name').textContent; document.getElementById('modal-rename').style.display='flex' }
-function closeRename(){ document.getElementById('modal-rename').style.display='none' }
-function saveRename(){ const v=document.getElementById('rename-inp').value.trim(); if(!v) return; localStorage.setItem(CK,v); applyName(v); closeRename(); }
+        const el = document.getElementById('dashboard');
+        if (!el) throw new Error('Dashboard element not found.');
 
-/* navigation */
-function go(elOrEvent){
-  const el = (elOrEvent instanceof Element) ? elOrEvent : (this||elOrEvent.target);
-  const p = el.dataset ? el.dataset.p : (el.getAttribute ? el.getAttribute('data-p') : 'dashboard');
-  document.querySelectorAll('.nav .item').forEach(i=>i.classList.remove('on'));
-  document.querySelectorAll('.container > div').forEach(d=>d.style.display='none');
-  const node = document.querySelector('.nav .item[data-p="'+p+'"]'); if(node) node.classList.add('on');
-  const pane = document.getElementById('pane-'+p) || document.getElementById('pane-'+p) ;
-  if(pane) pane.style.display='block';
-  CURRENT_PANE = p;
-  document.getElementById('tb-title').textContent = p.charAt(0).toUpperCase()+p.slice(1).replace('_',' ');
-  renderActive();
-}
+        // Ensure fonts/images have loaded
+        await document.fonts.ready;
 
-/* period */
-function setPeriod(p){ PERIOD=p; document.getElementById('period-label').textContent = p==='all'?'All Time':p; renderActive(); }
+        const rect = el.getBoundingClientRect();
+        // use element full scroll size so content isn't cropped when inner scroll exists
+        const width = Math.max(el.scrollWidth, rect.width);
+        const height = Math.max(el.scrollHeight, rect.height);
 
-/* update subs and badge */
-function updSub(){ const d = filterData(load()); document.getElementById('tb-sub').textContent = d.length ? `${d.length} entries` : ''; updBadge(); }
-function updBadge(){ const data=load(); const today=new Date(); today.setHours(0,0,0,0); const due=data.filter(e=>e.due_date && !e.settled && parseD(e.due_date) && parseD(e.due_date) <= today).length; const b=document.getElementById('due-badge'); if(due) { b.style.display='inline-block'; b.textContent=due; } else { b.style.display='none' } }
+        // html2canvas options: set scale to devicePixelRatio for crisp images
+        const canvas = await html2canvas(el, {
+          backgroundColor: '#ffffff',
+          width: width,
+          height: height,
+          windowWidth: document.documentElement.clientWidth,
+          windowHeight: document.documentElement.clientHeight,
+          scrollX: -window.scrollX,
+          scrollY: -window.scrollY,
+          scale: Math.max(1, window.devicePixelRatio || 1)
+        });
 
-/* filterData based on PERIOD */
-function filterData(arr){
-  if(PERIOD==='all') return arr;
-  const n=new Date(); n.setHours(0,0,0,0);
-  return arr.filter(e=>{
-    const dt=parseD(e.date); if(!dt) return false; dt.setHours(0,0,0,0);
-    if(PERIOD==='month') return dt.getMonth()===n.getMonth() && dt.getFullYear()===n.getFullYear();
-    return true;
-  });
-}
-
-/* ===========================
-   Renderers
-   =========================== */
-
-function renderActive(){
-  if(CURRENT_PANE==='dashboard') renderDash();
-  else if(CURRENT_PANE==='add') { document.getElementById('pane-add').style.display='block'; initAddForm(); }
-  else if(CURRENT_PANE==='upload') {/* shown already */ }
-  else if(CURRENT_PANE==='ledger') renderLedger();
-  else renderDash();
-}
-
-/* Dashboard */
-function renderDash(){
-  const all = filterData(load());
-  updSub();
-  if(!all.length){
-    document.getElementById('nw-val').textContent='₹0';
-    document.getElementById('k-income').textContent='₹0';
-    document.getElementById('k-expense').textContent='₹0';
-    document.getElementById('recent-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No data — add transactions or import a sheet.</div>';
-    return;
-  }
-  let totalIn=0,totalOut=0,totalEMI=0;
-  const catSpend = {};
-  const monthsMap = {};
-  all.forEach(e=>{
-    const a = Number(e.amount)||0;
-    if(e.type==='credit'||e.type==='salary') totalIn += a;
-    if(e.type==='debit'||e.type==='loan') totalOut += a;
-    if(e.type==='loan') totalEMI += a;
-    if(e.type==='debit'||e.type==='loan'){ catSpend[e.category]=(catSpend[e.category]||0)+a }
-    if(e.date){ const k=e.date.slice(0,7); if(!monthsMap[k]) monthsMap[k]={in:0,out:0}; if(e.type==='credit'||e.type==='salary') monthsMap[k].in+=a; if(e.type==='debit'||e.type==='loan') monthsMap[k].out+=a; }
-  });
-  const net = totalIn - totalOut;
-  document.getElementById('nw-val').textContent = fmt(net);
-  document.getElementById('nw-sub').textContent = `${all.length} transactions`;
-  document.getElementById('tot-in').textContent = fmt(totalIn);
-  document.getElementById('tot-out').textContent = fmt(totalOut);
-  document.getElementById('k-income').textContent = fmt(totalIn);
-  document.getElementById('k-expense').textContent = fmt(totalOut);
-  document.getElementById('k-emi').textContent = fmt(totalEMI);
-  document.getElementById('k-save').textContent = totalIn ? `${Math.round(Math.max(0,net)/totalIn*100)}%` : '0%';
-
-  // recent
-  const recent = all.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
-  document.getElementById('recent-list').innerHTML = recent.map(e=>{
-    const sign = (e.type==='credit'||e.type==='salary') ? '+' : '−';
-    const col = (e.type==='credit'||e.type==='salary') ? 'var(--green)' : 'var(--danger)';
-    return `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #F2EFEB">
-      <div style="max-width:70%"><div style="font-weight:700">${e.party}</div><div class="small">${e.category || e.type} ${e.ref? ' · '+e.ref : ''}</div></div>
-      <div style="text-align:right"><div style="font-weight:800;color:${col};">${sign}${fmt(e.amount)}</div><div class="small">${fmtD(e.date)}</div></div>
-    </div>`;
-  }).join('');
-
-  // trend chart
-  const months = Object.keys(monthsMap).sort();
-  const labels = months.map(k=>{ const [y,m]=k.split('-'); return new Date(y,m-1).toLocaleString('en-IN',{month:'short'}) });
-  const incomeData = months.map(k=>monthsMap[k].in || 0);
-  const expenseData = months.map(k=>monthsMap[k].out || 0);
-  drawBar('chart-trend', labels, [{label:'Income', data:incomeData, borderColor: getComputedStyle(document.documentElement).getPropertyValue('--green') || '#2D6A4F'},{label:'Expense', data:expenseData, borderColor: getComputedStyle(document.documentElement).getPropertyValue('--danger') || '#B5341A'}]);
-
-  // categories donut
-  const topCats = Object.entries(catSpend).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  drawDonut('chart-cats', topCats.map(t=>t[0]), topCats.map(t=>t[1]));
-}
-
-/* Ledger */
-function renderLedger(){
-  const data = filterData(load()).sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if(!data.length){ document.getElementById('ledger-body').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No entries yet.</div>'; return; }
-  let totalTaxable=0,totalTax=0,total=0,totalTDS=0,totalAdvance=0,totalPayment=0,netDueSum=0;
-  const rows = data.map((e,i)=>{
-    const netDue = Math.max(0,(Number(e.amount)||0) - (Number(e.tds)||0) - (Number(e.advance)||0) - (Number(e.payment)||0));
-    total += Number(e.amount)||0; totalTDS += Number(e.tds)||0; netDueSum += netDue;
-    return `<tr>
-      <td>${i+1}</td>
-      <td>${fmtD(e.date)}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${e.party}</td>
-      <td>${e.invoice_no || e.ref || '—'}</td>
-      <td style="text-align:right">${fmt(e.amount)}</td>
-      <td style="text-align:right">${e.gst?fmt(e.gst):'—'}</td>
-      <td style="text-align:right">${e.tds?fmt(e.tds):'—'}</td>
-      <td style="text-align:center">${e.due_date?fmtD(e.due_date):'—'}</td>
-      <td style="text-align:right">${fmt(netDue)}</td>
-      <td style="text-align:center">
-        <button class="btn" onclick="editEntry(${e.id})">Edit</button>
-        <button class="btn" onclick="delEntry(${e.id})" style="margin-left:6px">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
-  document.getElementById('ledger-body').innerHTML = `<div class="table-wrap"><table>
-    <thead><tr><th>#</th><th>Date</th><th>Party</th><th>Ref</th><th style="text-align:right">Amount</th><th style="text-align:right">GST</th><th style="text-align:right">TDS</th><th>Due</th><th style="text-align:right">Net Due</th><th></th></tr></thead>
-    <tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="4">Totals</td><td style="text-align:right">${fmt(total)}</td><td></td><td style="text-align:right">${fmt(totalTDS)}</td><td></td><td style="text-align:right">${fmt(netDueSum)}</td><td></td></tr></tfoot>
-  </table></div>`;
-}
-
-/* ===========================
-   CRUD: save, quick add, edit, delete
-   =========================== */
-
-function initAddForm(){
-  document.getElementById('f-date').value = nowISO();
-  document.getElementById('f-type').value = 'debit';
-  document.getElementById('f-amount').value = '';
-  document.getElementById('f-category').value = '';
-  document.getElementById('f-party').value = '';
-  document.getElementById('f-ref').value = '';
-  document.getElementById('f-gst').value = '';
-  document.getElementById('f-tds').value = '';
-  document.getElementById('f-due').value = '';
-  document.getElementById('f-status').value = 'Settled';
-  document.getElementById('f-notes').value = '';
-}
-
-function saveEntry(){
-  const date = document.getElementById('f-date').value;
-  const type = document.getElementById('f-type').value;
-  const amount = Number(document.getElementById('f-amount').value) || 0;
-  const category = document.getElementById('f-category').value.trim();
-  const party = document.getElementById('f-party').value.trim();
-  if(!date || !party || !amount){ alert('Date, Party and Amount are required'); return; }
-  const ref = document.getElementById('f-ref').value.trim();
-  const gst = Number(document.getElementById('f-gst').value) || 0;
-  const tds = Number(document.getElementById('f-tds').value) || 0;
-  const due = document.getElementById('f-due').value;
-  const status = document.getElementById('f-status').value;
-  const notes = document.getElementById('f-notes').value.trim();
-
-  const d = load();
-  const entry = {
-    id: Date.now(),
-    date, type, amount, category, party, ref,
-    invoice_no: ref, gst, tds, due_date: due, status, notes, settled: status==='Settled',
-    // placeholders for structured fields
-    lender:'', loan_total:0, rate:0, tenure:0, emi:0, loan_pt:'',
-    employee:'', sal_month:'', gross:0, pf:0, net_salary:0, deductions:0,
-    from_acc:'', to_acc:'', advance:0, payment:0
-  };
-  d.push(entry); save(d); updSub(); alert('Saved'); resetForm(); renderActive();
-}
-
-function resetForm(){ initAddForm(); }
-
-function quickAdd(type){
-  document.getElementById('qa-title').textContent = type==='credit' ? 'Quick Add Income':'Quick Add Expense';
-  document.getElementById('qa-date').value = nowISO();
-  document.getElementById('qa-amt').value = '';
-  document.getElementById('qa-party').value = '';
-  document.getElementById('qa-cat').value = 'Other';
-  document.getElementById('modal-quick').style.display='flex';
-  document.getElementById('modal-quick').dataset.type = type;
-}
-function closeQuick(){ document.getElementById('modal-quick').style.display='none'; }
-function saveQuick(){
-  const type = document.getElementById('modal-quick').dataset.type || 'debit';
-  const date = document.getElementById('qa-date').value;
-  const amount = Number(document.getElementById('qa-amt').value) || 0;
-  const party = document.getElementById('qa-party').value.trim();
-  const cat = document.getElementById('qa-cat').value;
-  if(!amount || !party){ alert('Amount and party required'); return; }
-  const d = load();
-  d.push({ id: Date.now(), date, type, amount, category:cat, party, ref:'', gst:0, tds:0, due_date:'', status:'Settled', notes:'', settled:true });
-  save(d); updSub(); closeQuick(); if(CURRENT_PANE==='dashboard') renderDash();
-}
-
-/* edit/delete */
-function delEntry(id){
-  if(!confirm('Delete this entry?')) return;
-  const d = load().filter(e=>e.id !== id);
-  save(d); updSub(); renderActive();
-}
-
-function editEntry(id){
-  const d = load(); const e = d.find(x=>x.id===id);
-  if(!e){ alert('Entry not found'); return; }
-  // open add pane and prefill
-  go(document.querySelector('.nav .item[data-p="add"]'));
-  document.getElementById('f-date').value = e.date;
-  document.getElementById('f-type').value = e.type;
-  document.getElementById('f-amount').value = e.amount;
-  document.getElementById('f-category').value = e.category;
-  document.getElementById('f-party').value = e.party;
-  document.getElementById('f-ref').value = e.invoice_no || e.ref || '';
-  document.getElementById('f-gst').value = e.gst || '';
-  document.getElementById('f-tds').value = e.tds || '';
-  document.getElementById('f-due').value = e.due_date || '';
-  document.getElementById('f-status').value = e.status || 'Settled';
-  document.getElementById('f-notes').value = e.notes || '';
-
-  // replace saveEntry with update behavior temporarily
-  const saveBtn = document.querySelector('.form .btn.primary');
-  const oldOn = saveBtn.onclick;
-  saveBtn.onclick = function(){ updateEntry(id); saveBtn.onclick = oldOn; alert('Updated'); renderActive(); };
-}
-
-function updateEntry(id){
-  const d = load(); const idx = d.findIndex(e=>e.id===id); if(idx<0) return;
-  d[idx].date = document.getElementById('f-date').value;
-  d[idx].type = document.getElementById('f-type').value;
-  d[idx].amount = Number(document.getElementById('f-amount').value)||0;
-  d[idx].category = document.getElementById('f-category').value.trim();
-  d[idx].party = document.getElementById('f-party').value.trim();
-  d[idx].invoice_no = document.getElementById('f-ref').value.trim();
-  d[idx].gst = Number(document.getElementById('f-gst').value)||0;
-  d[idx].tds = Number(document.getElementById('f-tds').value)||0;
-  d[idx].due_date = document.getElementById('f-due').value;
-  d[idx].status = document.getElementById('f-status').value;
-  d[idx].notes = document.getElementById('f-notes').value.trim();
-  d[idx].settled = d[idx].status === 'Settled';
-  save(d);
-  updSub();
-}
-
-/* clear all */
-function clearAll(){
-  if(!confirm('Delete ALL data? This cannot be undone.')) return;
-  save([]); updSub(); renderActive();
-}
-
-/* ===========================
-   Import / Export / Backup
-   =========================== */
-
-function parseCSV(text){
-  const lines = text.split('\n').filter(l=>l.trim());
-  if(lines.length<2) return [];
-  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
-  return lines.slice(1).map(line=>{
-    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
-    const obj={}; headers.forEach((h,i)=> obj[h]= (vals[i]||'').replace(/"/g,'').trim());
-    return obj;
-  }).filter(r=>Object.values(r).some(v=>v));
-}
-
-function parseRows(rows){
-  // flexible mapping
-  const map = {
-    'date':'date','invoice date':'date',
-    'type':'type',
-    'amount':'amount',
-    'category':'category',
-    'party':'party','party name':'party',
-    'ref':'ref','invoice no':'invoice_no','invoice':'invoice_no',
-    'gst':'gst','tax':'gst',
-    'tds':'tds',
-    'due date':'due_date',
-    'status':'status'
-  };
-  const out=[];
-  rows.forEach(row=>{
-    const mapped={};
-    Object.entries(row).forEach(([k,v])=>{
-      const key = (k||'').toString().toLowerCase().trim();
-      if(map[key]) mapped[map[key]] = v;
-    });
-    if(!mapped.party && !mapped.invoice_no) return;
-    let dateStr='';
-    if(mapped.date){
-      const d=mapped.date;
-      if(d instanceof Date) dateStr=d.toISOString().split('T')[0];
-      else {
-        const s=String(d).trim();
-        const dm = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-        if(dm){ const [,dd,mm,yy] = dm; dateStr = `${yy.length===2?'20'+yy:yy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
-        else if(s.match(/^\d{4}-\d{2}-\d{2}/)) dateStr=s.slice(0,10);
-        else if(!isNaN(Number(s))) { const js = new Date((Number(s)-25569)*86400000); dateStr = js.toISOString().split('T')[0]; }
+        // Convert to blob and download
+        canvas.toBlob(function(blob) {
+          if (!blob) {
+            alert('Failed to export image.');
+            return;
+          }
+          const ts = new Date().toISOString().replace(/[:.]/g,'-');
+          downloadBlob(blob, `fintrack-dashboard-${ts}.png`);
+        }, 'image/png');
+      } catch (err) {
+        console.error(err);
+        alert('Error while generating dashboard image: ' + (err && err.message ? err.message : err));
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Download Dashboard';
       }
     }
-    const amount = Number(mapped.amount)||0;
-    const gst = Number(mapped.gst)||0;
-    const tds = Number(mapped.tds)||0;
-    const status = mapped.status || 'Pending';
-    out.push({ id:0, date: dateStr || nowISO(), type:mapped.type||'debit', amount, category:mapped.category||'', party: mapped.party||'Unknown', invoice_no: mapped.invoice_no||'', gst, tds, due_date: mapped.due_date||'', status, notes:'' });
-  });
-  return out;
-}
 
-function handleFile(file){
-  if(!file) return;
-  const ok = document.getElementById('upload-ok'), err = document.getElementById('upload-err');
-  ok.style.display='none'; err.style.display='none';
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    try{
-      let rows=[];
-      const name = file.name.toLowerCase();
-      if(name.endsWith('.csv')) rows = parseCSV(ev.target.result);
-      else {
-        const wb = XLSX.read(ev.target.result, {type:'array', cellDates:true});
-        const s = wb.SheetNames.includes('Invoice Data') ? 'Invoice Data' : wb.SheetNames[0];
-        rows = XLSX.utils.sheet_to_json(wb.Sheets[s], {defval:''});
-      }
-      if(!rows.length){ err.style.display='block'; err.textContent='No data found.'; return; }
-      const parsed = parseRows(rows);
-      if(!parsed.length){ err.style.display='block'; err.textContent='Could not parse. Use template.'; return; }
-      const existing = load();
-      const keys = new Set(existing.map(e => ((e.invoice_no||'')+'__'+(e.party||'')).toLowerCase().trim()));
-      const fresh = parsed.filter(e => !keys.has(((e.invoice_no||'')+'__'+(e.party||'')).toLowerCase().trim()));
-      fresh.forEach((e,i)=>{ e.id = Date.now()+i; });
-      const merged = [...existing, ...fresh];
-      save(merged); updSub();
-      ok.style.display='block'; ok.innerHTML = `Imported <strong>${fresh.length}</strong> new entries. ${parsed.length - fresh.length} duplicates skipped.`;
-    }catch(ex){ err.style.display='block'; err.textContent='Error: '+ex.message }
-  };
-  if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file); else reader.readAsArrayBuffer(file);
-}
+    // Hook up button
+    document.getElementById('downloadBtn').addEventListener('click', downloadDashboard);
 
-function downloadTemplate(){
-  const wb = XLSX.utils.book_new();
-  const headers = ['Invoice Date *','Party Name *','GSTIN','Invoice No *','Taxable Amt (₹)','Tax / GST (₹)','Total (₹) AUTO','TDS (₹)','Credit Days','Due Date AUTO','Advance Paid (₹)','Payment Recd (₹)','Net Due (₹) AUTO','Status','Notes'];
-  const sample = [
-    ['15/03/2026','Rajesh Traders','22AAAAA0000A1Z5','INV-001',10000,1800,11800,0,30,'',2000,0,'', 'Partial','First order'],
-    ['16/03/2026','Kumar Suppliers','','INV-002',25000,4500,29500,295,45,'',0,0,'', 'Pending',''],
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([headers,...sample]);
-  ws['!cols'] = headers.map(h=>({wch:18}));
-  XLSX.utils.book_append_sheet(wb, ws, 'Invoice Data');
-  const inst = [
-    ['INSTRUCTIONS'],['Fill only required / yellow columns — the green columns auto-calc.'],['Upload the file via Import Sheet.']
-  ];
-  const ws2 = XLSX.utils.aoa_to_sheet(inst);
-  XLSX.utils.book_append_sheet(wb, ws2, 'Instructions');
-  XLSX.writeFile(wb, 'fintrack_template.xlsx');
-}
+    // Example: a lightweight CSV export option (keeps data local)
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const rows = [
+        ['date','desc','amount'],
+        ['2026-03-10','Website fee','-2500'],
+        ['2026-03-11','Client Payment','55000'],
+        ['2026-03-15','Stationery','-1200']
+      ];
+      const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+      const ts = new Date().toISOString().replace(/[:.]/g,'-');
+      downloadBlob(blob, `fintrack-data-${ts}.csv`);
+    });
 
-/* export CSV */
-function exportCSV(){
-  const data = load(); if(!data.length){ alert('No data'); return; }
-  const keys = ['date','type','amount','category','party','invoice_no','gst','tds','due_date','status','notes'];
-  const labels = ['Date','Type','Amount','Category','Party','Invoice','GST','TDS','Due Date','Status','Notes'];
-  const rows = data.map(e => keys.map(k=>{ const v=e[k]??''; return String(v).includes(',')?`"${v}"`:v; }).join(','));
-  const blob = new Blob([[labels.join(','),...rows].join('\n')], {type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `fintrack_${nowISO()}.csv`; a.click();
-}
-
-/* backup / restore */
-function backupData(){
-  const d = load(); const blob = new Blob([JSON.stringify({app:'FinTrack',v:1,date:new Date().toISOString(),count:d.length,data:d},null,2)],{type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `fintrack_backup_${nowISO()}.json`; a.click();
-}
-function restoreData(inp){
-  const file = inp.files[0]; if(!file) return;
-  const r = new FileReader();
-  r.onload = e=>{
-    try{
-      const b = JSON.parse(e.target.result);
-      const rows = b.data || b;
-      if(!Array.isArray(rows)){ alert('Invalid backup'); return; }
-      if(!confirm(`Restore ${rows.length} entries? This will replace local data.`)) return;
-      save(rows); updSub(); alert('Restored'); renderActive();
-    }catch(err){ alert('Invalid file: '+err.message); }
-  };
-  r.readAsText(file); inp.value='';
-}
-
-/* ===========================
-   Charts helpers
-   =========================== */
-function drawBar(id, labels, datasets){
-  if(_charts[id]) _charts[id].destroy();
-  const ctx = document.getElementById(id);
-  if(!ctx) return;
-  _charts[id] = new Chart(ctx, {
-    type:'bar',
-    data:{ labels, datasets: datasets.map((ds,i)=>({ label: ds.label, data: ds.data, backgroundColor: i===0 ? 'rgba(45,106,79,0.12)' : 'rgba(181,52,26,0.12)', borderColor: ds.borderColor || '#ccc', borderWidth:1, borderRadius:6})) },
-    options:{ maintainAspectRatio:false, plugins:{legend:{position:'bottom'}} }
-  });
-}
-function drawDonut(id, labels, data){
-  if(_charts[id]) _charts[id].destroy();
-  const ctx = document.getElementById(id); if(!ctx) return;
-  _charts[id] = new Chart(ctx, {
-    type:'doughnut',
-    data:{ labels, datasets:[{ data, backgroundColor:['#B5341A','#92601A','#5B3A8A','#1E4E8C','#1A6B6B','#2D6A4F'] }] },
-    options:{ maintainAspectRatio:false, plugins:{legend:{position:'bottom'}} }
-  });
-}
-
-/* ===========================
-   Startup
-   =========================== */
-function init(){
-  loadName(); updSub(); renderDash();
-  document.getElementById('f-date').value = nowISO();
-}
-init();
-</script>
+    // Accessibility: enable keyboard for download button
+    document.getElementById('downloadBtn').setAttribute('aria-label','Download dashboard as PNG');
+  </script>
 </body>
 </html>
