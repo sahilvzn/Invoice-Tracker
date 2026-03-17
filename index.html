@@ -487,13 +487,19 @@ function handleFile(file){
 
       // Merge with existing (append)
       const existing=load();
+
+      // Dedup check — skip if same invoice_no + party already exists
+      const existingKeys=new Set(existing.map(e=>(e.invoice_no+'__'+e.party).toLowerCase().trim()));
+      const fresh=parsed.filter(e=>!existingKeys.has((e.invoice_no+'__'+e.party).toLowerCase().trim()));
+      const dupes=parsed.length-fresh.length;
+
       const startSr=existing.length+1;
-      parsed.forEach((e,i)=>{ e.id=Date.now()+i; e.sr=startSr+i; });
-      const merged=[...existing,...parsed];
+      fresh.forEach((e,i)=>{ e.id=Date.now()+i; e.sr=startSr+i; });
+      const merged=[...existing,...fresh];
       save(merged); updateHeader();
 
       okEl.style.display='block';
-      okEl.innerHTML=`✓ Successfully imported <strong>${parsed.length} entries</strong> from <strong>${file.name}</strong>. Total entries: ${merged.length}. <a href="#" onclick="document.querySelector('.tb:nth-child(4)').click();return false" style="color:var(--green);font-weight:700">→ Open CEO Dashboard</a>`;
+      okEl.innerHTML=`✓ Imported <strong>${fresh.length} new entries</strong> from <strong>${file.name}</strong>.${dupes>0?` <strong style="color:var(--amber)">${dupes} duplicate${dupes>1?'s':''} skipped.</strong>`:''} Total: ${merged.length}. <a href="#" onclick="document.querySelector('.tb:nth-child(4)').click();return false" style="color:var(--green);font-weight:700">→ Open CEO Dashboard</a>`;
       document.getElementById('file-inp').value='';
     } catch(err){
       errEl.style.display='block';
