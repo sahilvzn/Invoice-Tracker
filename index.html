@@ -3,429 +3,1187 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Invoice Tracker</title>
+<title>FinLens — CFO Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{
-  --bg:#F4F5F7;--surface:#fff;--border:#E5E7EB;--text:#111827;--muted:#6B7280;
-  --green:#059669;--green-bg:#ECFDF5;--red:#DC2626;--red-bg:#FEF2F2;
-  --amber:#D97706;--amber-bg:#FFFBEB;--blue:#2563EB;--blue-bg:#EFF6FF;
-  --radius:10px;
+:root {
+  --bg: #0A0B0F;
+  --surface: #111218;
+  --surface2: #16181F;
+  --surface3: #1C1F28;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #F0F2F7;
+  --text2: #8B90A0;
+  --text3: #555A6A;
+  --accent: #E8FF47;
+  --accent2: #47FFB2;
+  --red: #FF4D6A;
+  --red-dim: rgba(255,77,106,0.12);
+  --amber: #FFB347;
+  --amber-dim: rgba(255,179,71,0.12);
+  --blue: #5B8DEF;
+  --blue-dim: rgba(91,141,239,0.12);
+  --green: #47FFB2;
+  --green-dim: rgba(71,255,178,0.12);
+  --purple: #A78BFA;
+  --purple-dim: rgba(167,139,250,0.12);
+  --radius: 12px;
+  --radius-lg: 18px;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --glow-accent: 0 0 40px rgba(232,255,71,0.08);
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  height: 100%;
+  overflow-x: hidden;
+}
 
-/* ── Header ── */
-header{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200;gap:12px}
-.logo{font-size:15px;font-weight:700;letter-spacing:-.4px;flex-shrink:0}.logo em{color:var(--red);font-style:normal}
-.tabs{display:flex;gap:2px;background:#F3F4F6;border-radius:8px;padding:3px}
-.tb{background:none;border:none;padding:7px 15px;font-size:13px;border-radius:6px;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;white-space:nowrap}
-.tb.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.badge{background:var(--red);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px}
-.entry-ct{font-size:12px;color:var(--muted);flex-shrink:0}
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 99px; }
 
-main{max-width:1200px;margin:0 auto;padding:24px 20px}
-.pane{display:none}.pane.on{display:block}
+/* ── Noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
 
-/* ── Cards ── */
-.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
-.card-hd{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:16px}
+/* ── Layout ── */
+.app { display: flex; height: 100vh; position: relative; z-index: 1; }
 
-/* ── Upload zone ── */
-.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFAFA;margin-bottom:16px}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-bg)}
-.upload-zone h3{font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text)}
-.upload-zone p{font-size:13px;color:var(--muted);margin-bottom:16px}
-.upload-zone .ext{display:inline-flex;gap:6px;justify-content:center;flex-wrap:wrap}
-.ext-tag{background:#F3F4F6;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;color:var(--muted)}
-.upload-result{background:var(--green-bg);border:1px solid #A7F3D0;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green);display:none}
-.upload-err{background:var(--red-bg);border:1px solid #FECACA;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red);display:none}
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar-logo {
+  padding: 22px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 14px;
+  color: #0A0B0F;
+  flex-shrink: 0;
+}
+.logo-text {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.logo-text span { color: var(--accent); }
+.logo-sub { font-size: 10px; color: var(--text3); margin-top: 1px; letter-spacing: 0.5px; text-transform: uppercase; }
 
-/* ── Backup bar ── */
-.backup-bar{background:var(--amber-bg);border:1px solid #FCD34D;border-radius:var(--radius);padding:11px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.backup-bar p{font-size:13px;color:#92400E;flex:1;min-width:200px}
+.sidebar-nav { padding: 14px 12px; flex: 1; }
+.nav-group { margin-bottom: 24px; }
+.nav-group-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text3);
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+  user-select: none;
+  position: relative;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active {
+  background: rgba(232,255,71,0.1);
+  color: var(--accent);
+}
+.nav-item.active .nav-icon { color: var(--accent); }
+.nav-icon { font-size: 15px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-family: var(--font-mono);
+}
 
-/* ── Form ── */
-.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.fl{display:flex;flex-direction:column;gap:5px}.fl.full{grid-column:1/-1}
-.fl label{font-size:12px;font-weight:600;color:var(--muted)}
-.fl .sub{font-size:10px;color:var(--muted);font-weight:400}
-input,select{font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:7px;padding:9px 11px;background:#fff;color:var(--text);width:100%;transition:border .15s}
-input:focus,select:focus{outline:none;border-color:#111}
-input[readonly]{background:#F9FAFB;color:var(--muted);cursor:not-allowed}
-.auto-g{background:var(--green-bg)!important;color:var(--green)!important;border-color:#A7F3D0!important;font-weight:600}
-.auto-r{background:var(--red-bg)!important;color:var(--red)!important;border-color:#FECACA!important;font-weight:600}
-.sec-lbl{grid-column:1/-1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px}
-.btn-save{background:#111;color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;margin-top:4px;transition:opacity .15s}
-.btn-save:hover{opacity:.83}
-.form-msg{font-size:13px;padding:8px 0;min-height:26px}
-.hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.7}
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border);
+}
+.org-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.org-avatar {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--purple), var(--blue));
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  font-family: var(--font-head);
+  flex-shrink: 0;
+}
+.org-name { font-size: 12px; font-weight: 600; }
+.org-role { font-size: 10px; color: var(--text3); }
 
-/* ── PAYABLE highlight ── */
-.payable-banner{background:#FFF1F2;border:2px solid #FCA5A5;border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.payable-main{display:flex;flex-direction:column;gap:4px}
-.payable-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#9F1239}
-.payable-val{font-size:36px;font-weight:900;color:var(--red);letter-spacing:-1px;line-height:1}
-.payable-sub{font-size:13px;color:#BE123C}
-.payable-breakdown{display:flex;gap:20px;flex-wrap:wrap}
-.pb-item{text-align:center}
-.pb-item-val{font-size:18px;font-weight:800;color:var(--red)}
-.pb-item-lbl{font-size:11px;color:#BE123C;margin-top:2px}
+/* ── Main content ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-/* ── Metrics ── */
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-@media(max-width:640px){.metrics{grid-template-columns:1fr 1fr}}
-.mc{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
-.mc::after{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
-.mc.green::after{background:var(--green)}.mc.red::after{background:var(--red)}
-.mc.amber::after{background:var(--amber)}.mc.blue::after{background:var(--blue)}.mc.gray::after{background:#9CA3AF}
-.mc-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
-.mc-val{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1}
-.mc-sub{font-size:11px;color:var(--muted);margin-top:4px}
-.mc.green .mc-val{color:var(--green)}.mc.red .mc-val{color:var(--red)}
-.mc.amber .mc-val{color:var(--amber)}.mc.blue .mc-val{color:var(--blue)}
+/* ── Topbar ── */
+.topbar {
+  height: 56px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 14px;
+}
+.topbar-title {
+  font-family: var(--font-head);
+  font-size: 15px;
+  font-weight: 700;
+  flex: 1;
+}
+.period-tabs {
+  display: flex;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.period-tab {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.period-tab.active { background: var(--surface3); color: var(--text); }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+.topbar-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.topbar-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+.topbar-btn.primary {
+  background: var(--accent);
+  color: #0A0B0F;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.topbar-btn.primary:hover { background: #d4e840; }
 
-/* ── Charts ── */
-.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-@media(max-width:700px){.charts-row{grid-template-columns:1fr}}
-.chart-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
-.chart-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:14px}
-.chart-wrap{position:relative;height:220px}
+/* ── Content area ── */
+.content { flex: 1; overflow-y: auto; padding: 24px; }
 
-/* ── Filters ── */
-.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
-.flabel{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px}
-.fbtn{background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--muted);transition:all .15s}
-.fbtn:hover,.fbtn.on{background:#111;color:#fff;border-color:#111}
+/* ── Panes ── */
+.pane { display: none; }
+.pane.active { display: block; }
 
-/* ── Alerts ── */
-.alert-box{background:var(--red-bg);border:1px solid #FECACA;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:var(--red);line-height:1.6}
-.alert-box::before{content:'⚠  '}
-.all-ok{background:var(--green-bg);border:1px solid #A7F3D0;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green)}
+/* ── KPI Strip ── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+@media(max-width:900px) { .kpi-strip { grid-template-columns: 1fr 1fr; } }
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.kpi:hover { border-color: var(--border2); }
+.kpi::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.12;
+}
+.kpi.k-red::after { background: var(--red); }
+.kpi.k-green::after { background: var(--green); }
+.kpi.k-blue::after { background: var(--blue); }
+.kpi.k-amber::after { background: var(--amber); }
+.kpi.k-purple::after { background: var(--purple); }
+.kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--text3);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.kpi-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.kpi-val {
+  font-family: var(--font-head);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.kpi.k-red .kpi-val { color: var(--red); }
+.kpi.k-green .kpi-val { color: var(--green); }
+.kpi.k-blue .kpi-val { color: var(--blue); }
+.kpi.k-amber .kpi-val { color: var(--amber); }
+.kpi.k-purple .kpi-val { color: var(--purple); }
+.kpi-sub { font-size: 11px; color: var(--text3); }
+.kpi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-family: var(--font-mono);
+}
+.kpi-chip.up { background: var(--green-dim); color: var(--green); }
+.kpi-chip.dn { background: var(--red-dim); color: var(--red); }
 
-/* ── Progress ── */
-.pb-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
-.pb-label{font-size:12px;min-width:115px;color:var(--muted)}
-.pb{flex:1;height:7px;background:#F3F4F6;border-radius:99px;overflow:hidden}
-.pb-fill{height:100%;border-radius:99px;transition:width .5s}
-.pb-amt{font-size:12px;min-width:90px;text-align:right;font-weight:700}
+/* ── Big payable hero ── */
+.payable-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+.payable-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,77,106,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.ph-left {}
+.ph-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--red);
+  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.ph-eyebrow::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+.ph-val {
+  font-family: var(--font-head);
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--red);
+}
+.ph-desc { font-size: 13px; color: var(--text2); margin-top: 6px; }
+.ph-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ph-pill {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  text-align: center;
+  min-width: 110px;
+}
+.ph-pill-val {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.ph-pill-label { font-size: 10px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.6px; }
 
-/* ── Party rows ── */
-.party-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F3F4F6}
-.party-row:last-child{border-bottom:none}
-.party-name{font-size:13px;font-weight:600}
-.party-meta{font-size:11px;color:var(--muted);margin-top:1px}
-.party-out{font-size:15px;font-weight:800}
+/* ── Charts row ── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+@media(max-width:900px) { .charts-row { grid-template-columns: 1fr; } }
+.chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.chart-panel.wide { grid-column: span 2; }
+.cp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.cp-title {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text2);
+}
+.cp-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.chart-wrap { position: relative; height: 200px; }
+.chart-wrap.sm { height: 170px; }
 
-/* ── Table ── */
-.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
-table{width:100%;border-collapse:collapse;min-width:1080px}
-thead th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:10px 11px;border-bottom:1px solid var(--border);background:#F9FAFB;text-align:left;white-space:nowrap}
-tbody td{padding:9px 11px;border-bottom:1px solid #F3F4F6;font-size:12px}
-tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:#FAFAFA}
-tfoot td{padding:9px 11px;font-size:12px;font-weight:700;background:#F3F4F6;border-top:1px solid var(--border)}
-.num{text-align:right}
-.ovd td{background:#FFF5F5}.ovd td:first-child{border-left:3px solid var(--red)}
-.del-btn{background:none;border:none;color:#D1D5DB;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:12px;transition:color .15s}
-.del-btn:hover{color:var(--red)}
-.st-sel{font-size:11px;border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-family:inherit;cursor:pointer;background:#fff}
+/* ── Alerts panel ── */
+.alerts-section { margin-bottom: 20px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+}
+.section-count {
+  background: var(--red-dim);
+  color: var(--red);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-family: var(--font-mono);
+}
+.alert-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.15s;
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+.alert-card:hover { border-color: var(--red); }
+.alert-card.warn { border-left-color: var(--amber); }
+.alert-card.info { border-left-color: var(--blue); }
+.alert-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.alert-icon.danger { background: var(--red-dim); }
+.alert-icon.warn { background: var(--amber-dim); }
+.alert-icon.info { background: var(--blue-dim); }
+.alert-body { flex: 1; }
+.alert-title { font-size: 13px; font-weight: 600; }
+.alert-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.alert-amount {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--red);
+  flex-shrink: 0;
+}
+.alert-amount.warn { color: var(--amber); }
+.alert-amount.info { color: var(--blue); }
+.all-clear {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 10px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 500;
+}
 
-/* ── Buttons ── */
-.btn-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.btn{background:#fff;border:1px solid var(--border);border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);display:flex;align-items:center;gap:5px;transition:all .15s}
-.btn:hover{background:#F9FAFB;border-color:#9CA3AF}
-.btn.dark{background:#111;color:#fff;border-color:#111}.btn.dark:hover{background:#333}
-.btn.green{background:var(--green-bg);color:var(--green);border-color:#A7F3D0}
-.btn.amber{background:var(--amber-bg);color:var(--amber);border-color:#FCD34D}
+/* ── Party table ── */
+.table-section { margin-bottom: 20px; }
+.tbl-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text3);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+thead th.num { text-align: right; }
+tbody td {
+  padding: 11px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  transition: background 0.1s;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface2); }
+tbody td.num { text-align: right; font-family: var(--font-mono); font-size: 11px; }
+tbody tr.overdue td { background: rgba(255,77,106,0.04); }
+tbody tr.overdue td:first-child { border-left: 2px solid var(--red); }
+tfoot td {
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+tfoot td.num { text-align: right; }
 
-.em{text-align:center;padding:40px;color:var(--muted)}
+/* ── Status badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.badge::before { content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.badge.paid { background: var(--green-dim); color: var(--green); }
+.badge.paid::before { background: var(--green); }
+.badge.pending { background: var(--red-dim); color: var(--red); }
+.badge.pending::before { background: var(--red); }
+.badge.partial { background: var(--amber-dim); color: var(--amber); }
+.badge.partial::before { background: var(--amber); }
+.badge.advance { background: var(--blue-dim); color: var(--blue); }
+.badge.advance::before { background: var(--blue); }
+
+/* ── Status select ── */
+.st-sel {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.st-sel:focus { outline: none; border-color: var(--accent); }
+
+/* ── Progress bars ── */
+.progress-section { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+@media(max-width:700px) { .progress-section { grid-template-columns: 1fr; } }
+.progress-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.prog-row { margin-bottom: 14px; }
+.prog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.prog-label { font-size: 12px; font-weight: 500; color: var(--text2); }
+.prog-amt { font-size: 12px; font-family: var(--font-mono); font-weight: 500; }
+.prog-track { height: 6px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── Party cards ── */
+.party-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media(max-width:700px) { .party-grid { grid-template-columns: 1fr; } }
+.party-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.15s;
+}
+.party-card:hover { border-color: var(--border2); }
+.party-avatar {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+  font-family: var(--font-head);
+  flex-shrink: 0;
+}
+.party-info { flex: 1; min-width: 0; }
+.party-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.party-meta { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.party-due { font-family: var(--font-mono); font-size: 14px; font-weight: 600; flex-shrink: 0; }
+
+/* ── Upload pane ── */
+.upload-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface);
+  margin-bottom: 16px;
+}
+.upload-zone:hover, .upload-zone.drag {
+  border-color: var(--accent);
+  background: rgba(232,255,71,0.03);
+}
+.upload-icon { font-size: 36px; margin-bottom: 14px; }
+.upload-title { font-family: var(--font-head); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.upload-sub { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+.ext-pills { display: flex; gap: 6px; justify-content: center; }
+.ext-pill {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+.upload-msg {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 14px;
+  display: none;
+}
+.upload-msg.ok { background: var(--green-dim); border: 1px solid rgba(71,255,178,0.2); color: var(--green); }
+.upload-msg.err { background: var(--red-dim); border: 1px solid rgba(255,77,106,0.2); color: var(--red); }
+.info-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.info-title { font-family: var(--font-head); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text3); margin-bottom: 14px; }
+.info-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media(max-width:600px) { .info-steps { grid-template-columns: 1fr 1fr; } }
+.info-step {
+  padding: 14px;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.step-num {
+  width: 26px; height: 26px;
+  background: var(--surface3);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.step-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.step-desc { font-size: 11px; color: var(--text3); line-height: 1.5; }
+.backup-strip {
+  background: rgba(255,179,71,0.07);
+  border: 1px solid rgba(255,179,71,0.2);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.backup-text { font-size: 12px; color: var(--amber); flex: 1; min-width: 200px; }
+
+/* ── Add entry pane ── */
+.form-wrap { max-width: 680px; }
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 14px; }
+.form-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+.form-input, .form-select {
+  font-family: var(--font-body);
+  font-size: 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); }
+.form-input[readonly] { color: var(--text3); cursor: not-allowed; }
+.form-input.auto-green { border-color: rgba(71,255,178,0.3); color: var(--green); background: var(--green-dim); font-family: var(--font-mono); font-weight: 600; }
+.form-input.auto-red { border-color: rgba(255,77,106,0.3); color: var(--red); background: var(--red-dim); font-family: var(--font-mono); font-weight: 600; }
+.form-section-label { grid-column: 1/-1; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--text3); padding: 8px 0 2px; border-top: 1px solid var(--border); margin-top: 4px; }
+.btn-submit {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  color: #0A0B0F;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--font-head);
+  cursor: pointer;
+  letter-spacing: -0.3px;
+  transition: all 0.15s;
+  margin-top: 6px;
+}
+.btn-submit:hover { background: #d4e840; transform: translateY(-1px); }
+.form-feedback { font-size: 12px; padding: 8px 0; min-height: 26px; }
+
+/* ── Ledger pane ── */
+.ledger-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.del-btn {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+.del-btn:hover { color: var(--red); background: var(--red-dim); }
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text3); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--text2); }
+.empty-desc { font-size: 13px; }
+
+/* ── Divider label ── */
+.divider-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin: 6px 0 14px; display: flex; align-items: center; gap: 10px; }
+.divider-lbl::after { content:''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── Utility ── */
+.text-red { color: var(--red); }
+.text-green { color: var(--green); }
+.text-amber { color: var(--amber); }
+.text-blue { color: var(--blue); }
+.text-mono { font-family: var(--font-mono); }
+.fw-7 { font-weight: 700; }
+.btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+.btn.danger { color: var(--red); border-color: var(--red-dim); }
+.btn.danger:hover { background: var(--red-dim); }
+.btn.success { color: var(--green); border-color: rgba(71,255,178,0.2); }
+.btn.success:hover { background: var(--green-dim); }
+
+/* ── Overdue days badge ── */
+.ovd-badge {
+  display: inline-block;
+  background: var(--red-dim);
+  color: var(--red);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-family: var(--font-mono);
+}
+
+/* ── Scrollable table ── */
+.tbl-scroll { overflow-x: auto; }
+.tbl-scroll table { min-width: 1000px; }
+
+/* ── Animated number ── */
+@keyframes countUp { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+.kpi-val, .ph-val { animation: countUp 0.5s ease; }
 
 /* ── Print ── */
-@media print{
-  header,.btn-row,.filter-bar,#pane-upload,#pane-add,#pane-ledger,.no-print,.backup-bar{display:none!important}
-  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  main{padding:0;max-width:100%}
-  .pane{display:block!important}
-  .card,.chart-box,.mc,.payable-banner{break-inside:avoid;border:1px solid #ddd!important}
-  .metrics{grid-template-columns:repeat(3,1fr)!important}
-  .charts-row{grid-template-columns:1fr 1fr!important}
-  .chart-wrap{height:180px!important}
-  .print-hd{display:flex!important}
-  .del-btn,.st-sel{display:none!important}
-  .tbl-wrap{overflow:visible!important}
-  table{min-width:unset!important;font-size:11px!important}
+@media print {
+  .sidebar, .topbar, .ledger-toolbar, #pane-upload, #pane-add, #pane-ledger, .period-tabs { display: none !important; }
+  .pane { display: block !important; }
+  body { background: #fff; color: #000; }
+  .payable-hero, .kpi, .chart-panel, .alert-card, .progress-panel { break-inside: avoid; border: 1px solid #ddd !important; background: #fff !important; }
 }
-.print-hd{display:none;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #111}
-.print-hd h1{font-size:17px;font-weight:800}
-.print-hd p{font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
+<div class="app">
 
-<header>
-  <div class="logo">Invoice<em>Tracker</em></div>
-  <div class="tabs">
-    <button class="tb on"  onclick="sw('upload',this)">⬆ Upload Sheet</button>
-    <button class="tb"     onclick="sw('add',this)">+ Manual Entry</button>
-    <button class="tb"     onclick="sw('ledger',this)">Ledger</button>
-    <button class="tb"     id="ceo-tab" onclick="sw('ceo',this)">CEO Dashboard</button>
-  </div>
-  <span class="entry-ct" id="entry-ct">0 entries</span>
-</header>
-
-<main>
-
-<!-- ══ UPLOAD SHEET ═══════════════════════════════════════ -->
-<div id="pane-upload" class="pane on">
-
-  <div class="backup-bar">
-    <p>💾 Data saved in browser. <strong>Take backup regularly</strong> — especially after uploading new sheets.</p>
-    <button class="btn green" onclick="backupData()">⬇ Backup JSON</button>
-    <button class="btn" onclick="document.getElementById('restore-inp').click()">↑ Restore</button>
-    <input type="file" id="restore-inp" accept=".json" style="display:none" onchange="restoreData(this)">
-  </div>
-
-  <div class="card">
-    <div class="card-hd">Step 1 — Download Template</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the Excel template, fill it, save it. Then upload below.</p>
-    <button class="btn dark" onclick="downloadTemplate()">⬇ Download Excel Template (.xlsx)</button>
-    <p class="hint" style="margin-top:10px">
-      ✏ Fill only <strong>yellow columns</strong> — green columns (Total, Due Date, Net Due) auto-calculate<br>
-      📋 Sheet has 50 pre-formatted rows with dropdown for Status field<br>
-      💡 Credit Days = 30 means payment due 30 days after invoice date
-    </p>
-  </div>
-
-  <div class="card">
-    <div class="card-hd">Step 2 — Upload Filled Sheet</div>
-    <div class="upload-zone" id="drop-zone"
-         onclick="document.getElementById('file-inp').click()"
-         ondragover="event.preventDefault();this.classList.add('drag')"
-         ondragleave="this.classList.remove('drag')"
-         ondrop="handleDrop(event)">
-      <h3>📂 Click to select file or drag & drop here</h3>
-      <p>Supports Excel and CSV files from the template</p>
-      <div class="ext">
-        <span class="ext-tag">.xlsx</span>
-        <span class="ext-tag">.xls</span>
-        <span class="ext-tag">.csv</span>
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">F</div>
+        <div>
+          <div class="logo-text">Fin<span>Lens</span></div>
+          <div class="logo-sub">CFO Intelligence</div>
+        </div>
       </div>
     </div>
-    <input type="file" id="file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
-    <div class="upload-result" id="upload-ok"></div>
-    <div class="upload-err"   id="upload-err"></div>
-  </div>
 
-  <div class="card">
-    <div class="card-hd">How it works</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-      <div style="padding:14px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border)">
-        <div style="font-size:20px;margin-bottom:6px">1️⃣</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">Download Template</div>
-        <div style="font-size:12px;color:var(--muted)">Get the pre-formatted Excel file above</div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">Overview</div>
+        <div class="nav-item active" onclick="navTo('dashboard',this)">
+          <span class="nav-icon">◈</span> Dashboard
+        </div>
+        <div class="nav-item" onclick="navTo('ledger',this)">
+          <span class="nav-icon">≡</span> Ledger
+          <span class="nav-badge" id="ovd-badge" style="display:none">0</span>
+        </div>
       </div>
-      <div style="padding:14px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border)">
-        <div style="font-size:20px;margin-bottom:6px">2️⃣</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">Fill Yellow Columns</div>
-        <div style="font-size:12px;color:var(--muted)">Enter invoice data. Green columns auto-calculate.</div>
+      <div class="nav-group">
+        <div class="nav-group-label">Data</div>
+        <div class="nav-item" onclick="navTo('upload',this)">
+          <span class="nav-icon">↑</span> Import Sheet
+        </div>
+        <div class="nav-item" onclick="navTo('add',this)">
+          <span class="nav-icon">+</span> New Entry
+        </div>
       </div>
-      <div style="padding:14px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border)">
-        <div style="font-size:20px;margin-bottom:6px">3️⃣</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">Upload Here</div>
-        <div style="font-size:12px;color:var(--muted)">Drop your filled file in the upload box</div>
+      <div class="nav-group">
+        <div class="nav-group-label">Export</div>
+        <div class="nav-item" onclick="exportCSV()">
+          <span class="nav-icon">⬇</span> Export CSV
+        </div>
+        <div class="nav-item" onclick="backupData()">
+          <span class="nav-icon">💾</span> Backup JSON
+        </div>
+        <div class="nav-item" onclick="printDash()">
+          <span class="nav-icon">🖨</span> PDF Report
+        </div>
       </div>
-      <div style="padding:14px;background:var(--green-bg);border-radius:8px;border:1px solid #A7F3D0">
-        <div style="font-size:20px;margin-bottom:6px">4️⃣</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--green)">Dashboard Ready</div>
-        <div style="font-size:12px;color:var(--green)">CEO Dashboard auto-builds. Download PDF. Done.</div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="org-pill">
+        <div class="org-avatar" id="org-av">MY</div>
+        <div>
+          <div class="org-name" id="org-name">My Company</div>
+          <div class="org-role">CFO View</div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
+  </aside>
 
-<!-- ══ MANUAL ENTRY ═══════════════════════════════════════ -->
-<div id="pane-add" class="pane">
-  <div class="card">
-    <div class="card-hd">Manual Invoice Entry</div>
-    <div class="fg">
-      <div class="sec-lbl">Invoice Details</div>
-      <div class="fl"><label>Sr. No.</label><input id="f-sr" readonly placeholder="Auto"></div>
-      <div class="fl"><label>Invoice Date *</label><input type="date" id="f-date" oninput="calcDue()"></div>
-      <div class="fl full"><label>Party Name *</label><input id="f-party" placeholder="Supplier or customer name"></div>
-      <div class="fl"><label>GSTIN</label><input id="f-gstin" placeholder="22AAAAA0000A1Z5" maxlength="15"></div>
-      <div class="fl"><label>Invoice No. *</label><input id="f-inv" placeholder="INV-001"></div>
+  <!-- ── MAIN ── -->
+  <div class="main">
 
-      <div class="sec-lbl">Invoice Amount</div>
-      <div class="fl"><label>Taxable Amount (₹)</label><input type="number" id="f-taxable" placeholder="0" min="0" oninput="autoCalc()"></div>
-      <div class="fl"><label>Tax / GST (₹)</label><input type="number" id="f-tax" placeholder="0" min="0" oninput="autoCalc()"></div>
-      <div class="fl"><label>Total (₹) — Auto</label><input type="number" id="f-total" readonly class="auto-g"></div>
-      <div class="fl"><label>TDS (₹)</label><input type="number" id="f-tds" placeholder="0" min="0" oninput="autoCalc()"></div>
-
-      <div class="sec-lbl">Payment Terms</div>
-      <div class="fl">
-        <label>Credit Period (days) <span class="sub">→ Due date auto-fills</span></label>
-        <input type="number" id="f-cdays" placeholder="e.g. 30" min="0" oninput="calcDue()">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="period-tabs" id="period-tabs">
+        <button class="period-tab active" onclick="setF('all',this)">All Time</button>
+        <button class="period-tab" onclick="setF('month',this)">This Month</button>
+        <button class="period-tab" onclick="setF('quarter',this)">Quarter</button>
+        <button class="period-tab" onclick="setF('year',this)">This Year</button>
+        <button class="period-tab" onclick="setF('lastmonth',this)">Last Month</button>
       </div>
-      <div class="fl"><label>Due Date — Auto</label><input type="date" id="f-due" readonly class="auto-g"></div>
-      <div class="fl">
-        <label>Advance Paid (₹) <span class="sub">Paid before receiving goods</span></label>
-        <input type="number" id="f-advance" placeholder="0" min="0" oninput="autoCalc()">
+      <div class="topbar-actions">
+        <button class="topbar-btn" onclick="renderDash()">↺ Refresh</button>
+        <button class="topbar-btn primary" onclick="navToAdd()">+ New Invoice</button>
       </div>
-      <div class="fl">
-        <label>Payment Received (₹) <span class="sub">Received after invoice</span></label>
-        <input type="number" id="f-payment" placeholder="0" min="0" oninput="autoCalc()">
-      </div>
-      <div class="fl"><label>Net Due (₹) — Auto</label><input type="number" id="f-netdue" readonly></div>
-      <div class="fl"><label>Status</label>
-        <select id="f-status">
-          <option>Pending</option>
-          <option>Advance Paid</option>
-          <option>Partial</option>
-          <option>Paid</option>
-        </select>
-      </div>
-      <div class="fl full"><button class="btn-save" onclick="addEntry()">Save Entry</button></div>
     </div>
-    <div class="form-msg" id="form-msg"></div>
-  </div>
-</div>
 
-<!-- ══ LEDGER ════════════════════════════════════════════ -->
-<div id="pane-ledger" class="pane">
-  <div class="btn-row">
-    <button class="btn dark" onclick="exportCSV()">⬇ Export CSV</button>
-    <button class="btn green" onclick="backupData()">💾 Backup</button>
-    <button class="btn" onclick="renderLedger()">↺ Refresh</button>
-    <button class="btn" style="color:var(--red);border-color:#FECACA;margin-left:auto" onclick="clearAll()">🗑 Clear All</button>
-  </div>
-  <div id="ledger-body"><div class="em">Loading…</div></div>
-</div>
+    <!-- Content -->
+    <div class="content">
 
-<!-- ══ CEO DASHBOARD ════════════════════════════════════ -->
-<div id="pane-ceo" class="pane">
-  <div class="btn-row no-print">
-    <button class="btn dark" onclick="printDash()">🖨 Download PDF</button>
-    <button class="btn" onclick="renderCEO()">↺ Refresh</button>
-  </div>
-  <div class="print-hd" id="print-hd">
-    <div><h1>CEO Dashboard — Invoice & Payable Report</h1><p id="print-meta"></p></div>
-  </div>
-  <div class="filter-bar no-print">
-    <span class="flabel">Period:</span>
-    <button class="fbtn on" onclick="setF('all',this)">All time</button>
-    <button class="fbtn" onclick="setF('today',this)">Today</button>
-    <button class="fbtn" onclick="setF('yesterday',this)">Yesterday</button>
-    <button class="fbtn" onclick="setF('week',this)">This week</button>
-    <button class="fbtn" onclick="setF('month',this)">This month</button>
-    <button class="fbtn" onclick="setF('lastmonth',this)">Last month</button>
-    <button class="fbtn" onclick="setF('quarter',this)">This quarter</button>
-    <button class="fbtn" onclick="setF('year',this)">This year</button>
-    <button class="fbtn" onclick="setF('lastyear',this)">Last year</button>
-  </div>
-  <div id="ceo-body"><div class="em">Loading…</div></div>
-</div>
+      <!-- ══ DASHBOARD ══ -->
+      <div id="pane-dashboard" class="pane active">
+        <div id="dash-body"><div class="empty-state"><div class="empty-icon">◈</div><div class="empty-title">Loading…</div></div></div>
+      </div>
 
-</main>
+      <!-- ══ LEDGER ══ -->
+      <div id="pane-ledger" class="pane">
+        <div class="ledger-toolbar">
+          <button class="btn success" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn success" onclick="backupData()">💾 Backup</button>
+          <button class="btn" onclick="renderLedger()">↺ Refresh</button>
+          <button class="btn danger" onclick="clearAll()" style="margin-left:auto">🗑 Clear All</button>
+        </div>
+        <div id="ledger-body"><div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">Loading…</div></div></div>
+      </div>
+
+      <!-- ══ UPLOAD ══ -->
+      <div id="pane-upload" class="pane">
+        <div class="upload-wrap">
+          <div class="backup-strip">
+            <span class="backup-text">💾 Data lives in your browser. Take regular backups to avoid loss.</span>
+            <button class="btn success" onclick="backupData()">⬇ Backup JSON</button>
+            <button class="btn" onclick="document.getElementById('restore-inp').click()">↑ Restore</button>
+            <input type="file" id="restore-inp" accept=".json" style="display:none" onchange="restoreData(this)">
+          </div>
+
+          <div class="info-panel">
+            <div class="info-title">Step 1 — Download Template</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Download the Excel template, fill yellow columns, upload below. Green columns auto-calculate.</p>
+            <button class="btn success" onclick="downloadTemplate()">⬇ Download Excel Template (.xlsx)</button>
+          </div>
+
+          <div class="info-panel">
+            <div class="info-title">Step 2 — Upload Filled Sheet</div>
+            <div class="upload-zone" id="drop-zone"
+                 onclick="document.getElementById('file-inp').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="handleDrop(event)">
+              <div class="upload-icon">📂</div>
+              <div class="upload-title">Drop your file here</div>
+              <div class="upload-sub">Click to browse, or drag & drop</div>
+              <div class="ext-pills">
+                <span class="ext-pill">.xlsx</span>
+                <span class="ext-pill">.xls</span>
+                <span class="ext-pill">.csv</span>
+              </div>
+            </div>
+            <input type="file" id="file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+            <div class="upload-msg ok" id="upload-ok"></div>
+            <div class="upload-msg err" id="upload-err"></div>
+          </div>
+
+          <div class="info-panel">
+            <div class="info-title">How it works</div>
+            <div class="info-steps">
+              <div class="info-step">
+                <div class="step-num">01</div>
+                <div class="step-title">Download Template</div>
+                <div class="step-desc">Get the pre-formatted Excel file</div>
+              </div>
+              <div class="info-step">
+                <div class="step-num">02</div>
+                <div class="step-title">Fill Yellow Columns</div>
+                <div class="step-desc">Green columns auto-calculate</div>
+              </div>
+              <div class="info-step">
+                <div class="step-num">03</div>
+                <div class="step-title">Upload Here</div>
+                <div class="step-desc">Drag & drop or click to browse</div>
+              </div>
+              <div class="info-step" style="background:var(--green-dim);border-color:rgba(71,255,178,0.2)">
+                <div class="step-num" style="color:var(--green);background:var(--green-dim)">04</div>
+                <div class="step-title" style="color:var(--green)">Dashboard Live</div>
+                <div class="step-desc" style="color:var(--green)">CFO Dashboard auto-builds. Export PDF.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADD ENTRY ══ -->
+      <div id="pane-add" class="pane">
+        <div class="form-wrap">
+          <div class="form-card">
+            <div class="form-title">📋 New Invoice Entry</div>
+            <div class="form-grid">
+              <div class="form-section-label">Invoice Details</div>
+              <div class="form-group">
+                <label class="form-label">Sr. No.</label>
+                <input class="form-input" id="f-sr" readonly placeholder="Auto">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Invoice Date *</label>
+                <input class="form-input" type="date" id="f-date" oninput="calcDue()">
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Party Name *</label>
+                <input class="form-input" id="f-party" placeholder="Supplier or customer name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">GSTIN</label>
+                <input class="form-input" id="f-gstin" placeholder="22AAAAA0000A1Z5" maxlength="15">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Invoice No. *</label>
+                <input class="form-input" id="f-inv" placeholder="INV-001">
+              </div>
+
+              <div class="form-section-label">Invoice Amount</div>
+              <div class="form-group">
+                <label class="form-label">Taxable Amount (₹)</label>
+                <input class="form-input" type="number" id="f-taxable" placeholder="0" min="0" oninput="autoCalc()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tax / GST (₹)</label>
+                <input class="form-input" type="number" id="f-tax" placeholder="0" min="0" oninput="autoCalc()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Total — Auto</label>
+                <input class="form-input auto-green" type="number" id="f-total" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label">TDS (₹)</label>
+                <input class="form-input" type="number" id="f-tds" placeholder="0" min="0" oninput="autoCalc()">
+              </div>
+
+              <div class="form-section-label">Payment Terms</div>
+              <div class="form-group">
+                <label class="form-label">Credit Period (days)</label>
+                <input class="form-input" type="number" id="f-cdays" placeholder="30" min="0" oninput="calcDue()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Due Date — Auto</label>
+                <input class="form-input auto-green" type="date" id="f-due" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Advance Paid (₹)</label>
+                <input class="form-input" type="number" id="f-advance" placeholder="0" min="0" oninput="autoCalc()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Payment Received (₹)</label>
+                <input class="form-input" type="number" id="f-payment" placeholder="0" min="0" oninput="autoCalc()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Net Due — Auto</label>
+                <input class="form-input" type="number" id="f-netdue" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="f-status">
+                  <option>Pending</option>
+                  <option>Advance Paid</option>
+                  <option>Partial</option>
+                  <option>Paid</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <button class="btn-submit" onclick="addEntry()">Save Invoice →</button>
+              </div>
+            </div>
+            <div class="form-feedback" id="form-msg"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end .content -->
+  </div><!-- end .main -->
+</div><!-- end .app -->
 
 <script>
-// ══ Storage ═══════════════════════════════════════════════
-const KEY = 'inv_v5';
-const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{ return []; } };
-const save = d  => localStorage.setItem(KEY, JSON.stringify(d));
+// ══ Storage ══════════════════════════════════════════════════════
+const KEY = 'finlens_v1';
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)||'[]'); } catch { return []; }};
+const save = d => localStorage.setItem(KEY, JSON.stringify(d));
 
 let activeF = 'all';
-let pieChart=null, barChart=null;
+let pieChart = null, barChart = null, trendChart = null;
 
-// ══ Init ══════════════════════════════════════════════════
-function init(){
-  document.getElementById('f-date').value = tod();
-  updateHeader();
-}
-const tod = () => new Date().toISOString().split('T')[0];
-
-function updateHeader(){
-  const d = load();
-  document.getElementById('entry-ct').textContent = d.length+' entr'+(d.length===1?'y':'ies');
-  updateBadge(d);
-  document.getElementById('f-sr').value = d.length+1;
-}
-
-// ══ Tabs ══════════════════════════════════════════════════
-function sw(tab,btn){
-  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
-  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
-  btn.classList.add('on');
-  document.getElementById('pane-'+tab).classList.add('on');
-  if(tab==='ledger') renderLedger();
-  if(tab==='ceo') renderCEO();
-}
-
-// ══ Helpers ═══════════════════════════════════════════════
-const fmt  = n => '₹'+(Math.round(Number(n)||0)).toLocaleString('en-IN');
-const fmtD = d => { if(!d)return'—'; const s=String(d).split('T')[0]; const[y,m,day]=s.split('-'); return `${day}/${m}/${y}`; };
+// ══ Helpers ══════════════════════════════════════════════════════
+const fmt    = n => '₹' + (Math.round(Number(n)||0)).toLocaleString('en-IN');
+const fmtD   = d => { if(!d)return'—'; const s=String(d).split('T')[0]; const[y,m,dd]=s.split('-'); return `${dd}/${m}/${y}`; };
 const parseD = d => { if(!d)return null; return new Date(String(d).split('T')[0]); };
 const netDue = e => Math.max(0,(e.total||0)-(e.tds||0)-(e.advance||0)-(e.payment||0));
+const tod    = () => new Date().toISOString().split('T')[0];
+const colors = ['#E8FF47','#47FFB2','#5B8DEF','#FF4D6A','#A78BFA','#FFB347','#FF6B9D','#00D9FF'];
 
-// ══ Form calcs ════════════════════════════════════════════
-function autoCalc(){
-  const tx=parseFloat(document.getElementById('f-taxable').value)||0;
-  const t =parseFloat(document.getElementById('f-tax').value)||0;
-  const tds=parseFloat(document.getElementById('f-tds').value)||0;
-  const adv=parseFloat(document.getElementById('f-advance').value)||0;
-  const pay=parseFloat(document.getElementById('f-payment').value)||0;
-  const total=tx+t, nd=Math.max(0,total-tds-adv-pay);
-  document.getElementById('f-total').value=total||'';
-  const el=document.getElementById('f-netdue');
-  el.value=nd; el.className=nd>0?'auto-r':'auto-g';
-  const sel=document.getElementById('f-status');
-  if(total>0){ if(nd===0)sel.value='Paid'; else if(adv>0&&pay===0)sel.value='Advance Paid'; else if(adv+pay>0)sel.value='Partial'; else sel.value='Pending'; }
-}
-function calcDue(){
-  const d=document.getElementById('f-date').value;
-  const cd=parseInt(document.getElementById('f-cdays').value)||0;
-  if(d&&cd>0){ const due=new Date(d); due.setDate(due.getDate()+cd); document.getElementById('f-due').value=due.toISOString().split('T')[0]; }
-  else document.getElementById('f-due').value='';
+function avatarColor(name) {
+  const i = (name||'').charCodeAt(0) % colors.length;
+  return colors[i];
 }
 
-// ══ Date filter ═══════════════════════════════════════════
-function setF(f,btn){
-  activeF=f;
-  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on'); renderCEO();
+// ══ Navigation ═══════════════════════════════════════════════════
+function navTo(pane, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('pane-'+pane).classList.add('active');
+  const titles = { dashboard:'Dashboard', ledger:'Ledger', upload:'Import Sheet', add:'New Invoice' };
+  document.getElementById('topbar-title').textContent = titles[pane]||pane;
+  document.getElementById('period-tabs').style.display = pane==='dashboard' ? 'flex' : 'none';
+  if(pane==='dashboard') renderDash();
+  if(pane==='ledger') renderLedger();
+  if(pane==='add') { const d=load(); document.getElementById('f-sr').value=d.length+1; document.getElementById('f-date').value=tod(); }
 }
-function filterData(data){
+function navToAdd() {
+  const el = document.querySelector('.nav-item:nth-child(2)');
+  navTo('add', document.querySelectorAll('.nav-item')[3]);
+}
+
+// ══ Period filter ════════════════════════════════════════════════
+function setF(f, btn) {
+  activeF = f;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDash();
+}
+function filterData(data) {
   if(activeF==='all') return data;
-  const now=new Date(); now.setHours(0,0,0,0);
-  return data.filter(e=>{
-    const dt=parseD(e.date); if(!dt)return false; dt.setHours(0,0,0,0);
-    if(activeF==='today')     return+dt===+now;
-    if(activeF==='yesterday'){const y=new Date(now);y.setDate(y.getDate()-1);return+dt===+y;}
-    if(activeF==='week'){const s=new Date(now);s.setDate(s.getDate()-s.getDay());return dt>=s&&dt<=now;}
+  const now = new Date(); now.setHours(0,0,0,0);
+  return data.filter(e => {
+    const dt = parseD(e.date); if(!dt)return false; dt.setHours(0,0,0,0);
+    if(activeF==='today')     return +dt===+now;
+    if(activeF==='yesterday'){ const y=new Date(now);y.setDate(y.getDate()-1);return+dt===+y; }
+    if(activeF==='week'){  const s=new Date(now);s.setDate(s.getDate()-s.getDay());return dt>=s&&dt<=now; }
     if(activeF==='month')     return dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear();
-    if(activeF==='lastmonth'){const s=new Date(now.getFullYear(),now.getMonth()-1,1),e2=new Date(now.getFullYear(),now.getMonth(),0);return dt>=s&&dt<=e2;}
-    if(activeF==='quarter'){const q=Math.floor(now.getMonth()/3);const s=new Date(now.getFullYear(),q*3,1);return dt>=s&&dt<=now;}
+    if(activeF==='lastmonth'){ const s=new Date(now.getFullYear(),now.getMonth()-1,1),e2=new Date(now.getFullYear(),now.getMonth(),0);return dt>=s&&dt<=e2; }
+    if(activeF==='quarter'){  const q=Math.floor(now.getMonth()/3);const s=new Date(now.getFullYear(),q*3,1);return dt>=s&&dt<=now; }
     if(activeF==='year')      return dt.getFullYear()===now.getFullYear();
     if(activeF==='lastyear')  return dt.getFullYear()===now.getFullYear()-1;
     return true;
   });
 }
 
-// ══ Badge ═════════════════════════════════════════════════
-function updateBadge(data){
-  const today=new Date(); today.setHours(0,0,0,0);
-  const ov=data.filter(e=>e.status!=='Paid'&&parseD(e.due_date)&&parseD(e.due_date)<today).length;
-  document.getElementById('ceo-tab').innerHTML='CEO Dashboard'+(ov?`<span class="badge">${ov}</span>`:'');
+// ══ Form calcs ═══════════════════════════════════════════════════
+function autoCalc(){
+  const tx=parseFloat(document.getElementById('f-taxable').value)||0;
+  const t=parseFloat(document.getElementById('f-tax').value)||0;
+  const tds=parseFloat(document.getElementById('f-tds').value)||0;
+  const adv=parseFloat(document.getElementById('f-advance').value)||0;
+  const pay=parseFloat(document.getElementById('f-payment').value)||0;
+  const total=tx+t, nd=Math.max(0,total-tds-adv-pay);
+  document.getElementById('f-total').value=total||'';
+  const el=document.getElementById('f-netdue');
+  el.value=nd; el.className='form-input '+(nd>0?'auto-red':'auto-green');
+  const sel=document.getElementById('f-status');
+  if(total>0){ if(nd===0)sel.value='Paid'; else if(adv>0&&pay===0)sel.value='Advance Paid'; else if(adv+pay>0)sel.value='Partial'; else sel.value='Pending'; }
+}
+function calcDue(){
+  const d=document.getElementById('f-date').value;
+  const cd=parseInt(document.getElementById('f-cdays').value)||0;
+  if(d&&cd>0){ const due=new Date(d);due.setDate(due.getDate()+cd);document.getElementById('f-due').value=due.toISOString().split('T')[0]; }
+  else document.getElementById('f-due').value='';
 }
 
-// ══ Manual Add ════════════════════════════════════════════
+// ══ Add entry ════════════════════════════════════════════════════
 function addEntry(){
   const msg=document.getElementById('form-msg');
   const party=document.getElementById('f-party').value.trim();
   const inv=document.getElementById('f-inv').value.trim();
   const date=document.getElementById('f-date').value;
-  if(!party||!inv||!date){msg.style.color='var(--red)';msg.textContent='Fill Date, Invoice No., and Party Name.';return;}
+  if(!party||!inv||!date){ msg.style.color='var(--red)'; msg.textContent='⚠ Fill Date, Invoice No., and Party Name.'; return; }
   const tx=parseFloat(document.getElementById('f-taxable').value)||0;
   const t=parseFloat(document.getElementById('f-tax').value)||0;
   const total=tx+t;
@@ -436,230 +1194,367 @@ function addEntry(){
   data.push({
     id:Date.now(), sr:data.length+1, date, party,
     gstin:document.getElementById('f-gstin').value.trim(),
-    invoice_no:inv, taxable:tx, tax:t, total,tds,
+    invoice_no:inv, taxable:tx, tax:t, total, tds,
     credit_days:parseInt(document.getElementById('f-cdays').value)||0,
     due_date:document.getElementById('f-due').value||'',
-    advance:adv, payment:pay,
-    net_due:Math.max(0,total-tds-adv-pay),
+    advance:adv, payment:pay, net_due:Math.max(0,total-tds-adv-pay),
     status:document.getElementById('f-status').value
   });
   save(data);
-  msg.style.color='var(--green)';msg.textContent=`✓ Saved — ${party} (${inv})`;
-  ['f-party','f-gstin','f-inv','f-taxable','f-tax','f-total','f-tds','f-cdays','f-due','f-advance','f-payment','f-netdue'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.className='';}});
+  msg.style.color='var(--green)'; msg.textContent=`✓ Saved — ${party} (${inv})`;
+  ['f-party','f-gstin','f-inv','f-taxable','f-tax','f-total','f-tds','f-cdays','f-due','f-advance','f-payment','f-netdue'].forEach(id=>{
+    const el=document.getElementById(id); if(el){el.value=''; el.className='form-input';}
+  });
   document.getElementById('f-status').value='Pending';
   document.getElementById('f-date').value=tod();
-  updateHeader(); setTimeout(()=>msg.textContent='',5000);
+  document.getElementById('f-sr').value=data.length+1;
+  updateBadge(data); setTimeout(()=>msg.textContent='',5000);
 }
 
-// ══ Excel Upload ══════════════════════════════════════════
-function handleDrop(e){
-  e.preventDefault();
-  document.getElementById('drop-zone').classList.remove('drag');
-  const file=e.dataTransfer.files[0]; if(file) handleFile(file);
+// ══ Badge ════════════════════════════════════════════════════════
+function updateBadge(data){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const ov=data.filter(e=>e.status!=='Paid'&&parseD(e.due_date)&&parseD(e.due_date)<today).length;
+  const b=document.getElementById('ovd-badge');
+  b.style.display=ov?'':'none'; b.textContent=ov;
 }
 
-function handleFile(file){
-  if(!file) return;
-  const okEl=document.getElementById('upload-ok');
-  const errEl=document.getElementById('upload-err');
-  okEl.style.display='none'; errEl.style.display='none';
-
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      let rows=[];
-      const name=file.name.toLowerCase();
-
-      if(name.endsWith('.csv')){
-        rows=parseCSV(e.target.result);
-      } else {
-        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-        // Try "Invoice Data" sheet first, else first sheet
-        const sheetName=wb.SheetNames.includes('Invoice Data')?'Invoice Data':wb.SheetNames[0];
-        const ws=wb.Sheets[sheetName];
-        rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      }
-
-      if(!rows.length){errEl.style.display='block';errEl.textContent='No data found in file.';return;}
-
-      const parsed=parseRows(rows);
-      if(!parsed.length){errEl.style.display='block';errEl.textContent='Could not read data. Make sure you\'re using the provided template. Required columns: Invoice Date, Party Name, Invoice No';return;}
-
-      // Merge with existing (append)
-      const existing=load();
-
-      // Dedup check — skip if same invoice_no + party already exists
-      const existingKeys=new Set(existing.map(e=>(e.invoice_no+'__'+e.party).toLowerCase().trim()));
-      const fresh=parsed.filter(e=>!existingKeys.has((e.invoice_no+'__'+e.party).toLowerCase().trim()));
-      const dupes=parsed.length-fresh.length;
-
-      const startSr=existing.length+1;
-      fresh.forEach((e,i)=>{ e.id=Date.now()+i; e.sr=startSr+i; });
-      const merged=[...existing,...fresh];
-      save(merged); updateHeader();
-
-      okEl.style.display='block';
-      okEl.innerHTML=`✓ Imported <strong>${fresh.length} new entries</strong> from <strong>${file.name}</strong>.${dupes>0?` <strong style="color:var(--amber)">${dupes} duplicate${dupes>1?'s':''} skipped.</strong>`:''} Total: ${merged.length}. <a href="#" onclick="document.querySelector('.tb:nth-child(4)').click();return false" style="color:var(--green);font-weight:700">→ Open CEO Dashboard</a>`;
-      document.getElementById('file-inp').value='';
-    } catch(err){
-      errEl.style.display='block';
-      errEl.textContent='Error reading file: '+err.message;
-    }
-  };
-  if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file);
-  else reader.readAsArrayBuffer(file);
-}
-
-// ── Parse rows from Excel/CSV ──────────────────────────────
-function parseRows(rows){
-  // Map flexible column names to internal keys
-  const colMap={
-    'invoice date':   'date',     'date':'date',
-    'party name':     'party',    'party':'party',
-    'gstin':          'gstin',
-    'invoice no':     'invoice_no','invoice no *':'invoice_no','invoice':'invoice_no','invoice no.':'invoice_no',
-    'taxable amt (₹)':'taxable',  'taxable amt':'taxable','taxable':'taxable','taxable amount':'taxable',
-    'tax / gst (₹)':  'tax',      'tax/gst (₹)':'tax','tax':'tax','gst':'tax','tax / gst':'tax',
-    'total (₹) auto': 'total',    'total (₹)':'total','total':'total',
-    'tds (₹)':        'tds',      'tds':'tds',
-    'credit days':    'credit_days',
-    'due date':       'due_date', 'due date auto':'due_date',
-    'advance paid (₹)':'advance', 'advance paid':'advance','advance':'advance',
-    'payment recd (₹)':'payment', 'payment recd':'payment','payment received':'payment','payment':'payment',
-    'net due (₹) auto':'net_due', 'net due (₹)':'net_due','net due':'net_due',
-    'status':         'status',
-    'notes':          'notes',
-    'sr no':          'sr_orig',  '#':'sr_orig'
-  };
-
-  const results=[];
-  rows.forEach(row=>{
-    const mapped={};
-    Object.entries(row).forEach(([k,v])=>{
-      const key=(k||'').toString().toLowerCase().trim().replace(/\*/g,'').trim();
-      const mapped_key=colMap[key];
-      if(mapped_key) mapped[mapped_key]=v;
-    });
-
-    // Skip empty rows
-    if(!mapped.party && !mapped.invoice_no) return;
-    const party=(mapped.party||'').toString().trim();
-    const inv=(mapped.invoice_no||'').toString().trim();
-    if(!party||!inv) return;
-
-    // Parse date
-    let dateStr='';
-    if(mapped.date){
-      const d=mapped.date;
-      if(d instanceof Date){ dateStr=d.toISOString().split('T')[0]; }
-      else {
-        const ds=String(d).trim();
-        // Try DD/MM/YYYY
-        const dm=ds.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-        if(dm){ const[,dd,mm,yyyy]=dm; dateStr=`${yyyy.length===2?'20'+yyyy:yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
-        else if(ds.match(/^\d{4}-\d{2}-\d{2}/)){ dateStr=ds.slice(0,10); }
-        else if(!isNaN(Number(ds))){ // Excel serial
-          const jsDate=new Date((Number(ds)-25569)*86400000);
-          dateStr=jsDate.toISOString().split('T')[0];
-        }
-      }
-    }
-
-    const taxable=parseFloat(mapped.taxable)||0;
-    const tax=parseFloat(mapped.tax)||0;
-    const total=mapped.total?parseFloat(mapped.total)||0:taxable+tax;
-    const tds=parseFloat(mapped.tds)||0;
-    const creditDays=parseInt(mapped.credit_days)||0;
-    const advance=parseFloat(mapped.advance)||0;
-    const payment=parseFloat(mapped.payment)||0;
-
-    // Due date
-    let dueDate=mapped.due_date?String(mapped.due_date).trim():'';
-    if(!dueDate&&dateStr&&creditDays>0){
-      const dd=new Date(dateStr); dd.setDate(dd.getDate()+creditDays);
-      dueDate=dd.toISOString().split('T')[0];
-    } else if(dueDate instanceof Date){
-      dueDate=dueDate.toISOString().split('T')[0];
-    } else if(dueDate&&!isNaN(Number(dueDate))){
-      const dd=new Date((Number(dueDate)-25569)*86400000);
-      dueDate=dd.toISOString().split('T')[0];
-    }
-
-    const nd=Math.max(0,total-tds-advance-payment);
-    let status=(mapped.status||'Pending').toString().trim();
-    if(!['Pending','Advance Paid','Partial','Paid'].includes(status)) status='Pending';
-
-    results.push({
-      id:0, sr:0, date:dateStr, party, gstin:(mapped.gstin||'').toString().trim(),
-      invoice_no:inv, taxable, tax, total, tds, credit_days:creditDays,
-      due_date:dueDate, advance, payment, net_due:nd, status,
-      notes:(mapped.notes||'').toString().trim()
-    });
-  });
-  return results;
-}
-
-function parseCSV(text){
-  const lines=text.split('\n').filter(l=>l.trim());
-  if(lines.length<2) return [];
-  const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
-  return lines.slice(1).map(line=>{
-    const vals=line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||[];
-    const obj={};
-    headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/"/g,'').trim(); });
-    return obj;
-  }).filter(r=>Object.values(r).some(v=>v));
-}
-
-// ══ Delete / Status ═══════════════════════════════════════
-function delEntry(id){
-  if(!confirm('Delete this entry?')) return;
-  let d=load().filter(e=>e.id!==id);
-  d.forEach((e,i)=>e.sr=i+1); save(d); renderLedger(); updateHeader();
-}
+// ══ Status update ════════════════════════════════════════════════
 function updStatus(id,val){
   const d=load(); const e=d.find(x=>x.id===id);
-  if(e){e.status=val;save(d);updateBadge(d);}
+  if(e){e.status=val; save(d); updateBadge(d);}
+}
+function delEntry(id){
+  if(!confirm('Delete this entry?')) return;
+  let d=load().filter(e=>e.id!==id); d.forEach((e,i)=>e.sr=i+1);
+  save(d); renderLedger(); updateBadge(d);
 }
 function clearAll(){
   if(!confirm('Delete ALL entries? This cannot be undone.')) return;
-  save([]); renderLedger(); updateHeader();
+  save([]); renderLedger(); updateBadge([]);
 }
 
-// ══ Render Ledger ═════════════════════════════════════════
+// ══ Render Dashboard ═════════════════════════════════════════════
+function renderDash(){
+  const data=filterData(load()); const el=document.getElementById('dash-body');
+  if(!data.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-title">No data yet</div><div class="empty-desc">Upload a sheet or add entries manually to see your CFO dashboard.</div></div>`;
+    return;
+  }
+  const today=new Date(); today.setHours(0,0,0,0);
+  let tInv=0,tTDS=0,tAdv=0,tPay=0;
+  let paidA=0,advA=0,partA=0,pendA=0,paidC=0,advC=0,partC=0,pendC=0,ovAmt=0;
+  const ovList=[],pm={};
+  const monthMap={};
+
+  data.forEach(e=>{
+    const n=netDue(e), tot=e.total||0, tds=e.tds||0, adv=e.advance||0, pay=e.payment||0;
+    tInv+=tot; tTDS+=tds; tAdv+=adv; tPay+=pay;
+    if(e.status==='Paid'){paidA+=tot;paidC++;}
+    else if(e.status==='Advance Paid'){advA+=n;advC++;}
+    else if(e.status==='Partial'){partA+=n;partC++;}
+    else{pendA+=n;pendC++;}
+    const dd=parseD(e.due_date);
+    if(e.status!=='Paid'&&dd){dd.setHours(0,0,0,0);if(dd<today){const dOv=Math.floor((today-dd)/86400000);ovAmt+=n;ovList.push({...e,n,dOv});}}
+    if(!pm[e.party])pm[e.party]={inv:0,out:0,adv:0,count:0};
+    pm[e.party].inv+=tot; pm[e.party].out+=n; pm[e.party].adv+=adv; pm[e.party].count++;
+    if(e.date){ const k=e.date.slice(0,7); if(!monthMap[k])monthMap[k]=0; monthMap[k]+=tot; }
+  });
+
+  const tOut=advA+partA+pendA;
+  const tSettled=tPay+tAdv+tTDS;
+  const cRate=tInv>0?Math.round(tSettled/tInv*100):0;
+  const parties=Object.entries(pm).sort((a,b)=>b[1].out-a[1].out).slice(0,8);
+
+  const alerts=[];
+  if(ovList.length) alerts.push({type:'danger',icon:'🔴',title:`${ovList.length} invoice${ovList.length>1?'s':''} past due`,meta:`${fmt(ovAmt)} total overdue payable`,amount:fmt(ovAmt)});
+  ovList.filter(e=>e.dOv>30).forEach(e=>alerts.push({type:'danger',icon:'⚠️',title:`${e.party} — ${e.invoice_no}`,meta:`${e.dOv} days overdue`,amount:fmt(e.n)}));
+  data.filter(e=>e.status==='Advance Paid').forEach(e=>alerts.push({type:'info',icon:'🔵',title:`Advance paid, goods awaited`,meta:`${e.party} | ${e.invoice_no}`,amount:fmt(e.advance),cls:'info'}));
+  data.filter(e=>e.status==='Partial'&&e.total>0&&(e.advance+e.payment)/e.total<0.1).forEach(e=>alerts.push({type:'warn',icon:'🟡',title:`Very low payment: ${e.party}`,meta:`${e.invoice_no} — only ${fmt(e.advance+e.payment)} of ${fmt(e.total)} paid`,amount:fmt(e.total-(e.advance+e.payment)),cls:'warn'}));
+
+  // Trend data (last 6 months)
+  const sortedMonths=Object.keys(monthMap).sort().slice(-6);
+  const trendVals=sortedMonths.map(k=>monthMap[k]);
+  const trendLabels=sortedMonths.map(k=>{ const[y,m]=k.split('-'); return new Date(y,m-1).toLocaleString('en-IN',{month:'short'}); });
+
+  const alertsHTML = alerts.length
+    ? alerts.map(a=>`<div class="alert-card ${a.cls||''}">
+        <div class="alert-icon ${a.type}"><span>${a.icon}</span></div>
+        <div class="alert-body">
+          <div class="alert-title">${a.title}</div>
+          <div class="alert-meta">${a.meta}</div>
+        </div>
+        <div class="alert-amount ${a.cls||''}">${a.amount}</div>
+      </div>`).join('')
+    : `<div class="all-clear">✓ No overdue or suspicious entries. All clean.</div>`;
+
+  const ovTableHTML = ovList.length ? `
+    <div class="table-section">
+      <div class="section-header"><div class="section-title">Overdue Invoices</div><span class="section-count">${ovList.length}</span></div>
+      <div class="tbl-wrap tbl-scroll"><table>
+        <thead><tr>
+          <th>Party</th><th>Invoice</th><th class="num">Net Due</th>
+          <th>Due Date</th><th class="num">Overdue By</th><th>Status</th>
+        </tr></thead>
+        <tbody>${ovList.sort((a,b)=>b.dOv-a.dOv).map(e=>`<tr class="overdue">
+          <td class="fw-7 text-red">${e.party}</td>
+          <td class="text-mono">${e.invoice_no}</td>
+          <td class="num fw-7 text-red">${fmt(e.n)}</td>
+          <td>${fmtD(e.due_date)}</td>
+          <td class="num"><span class="ovd-badge">${e.dOv}d</span></td>
+          <td><span class="badge pending">${e.status}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>` : '';
+
+  el.innerHTML=`
+    <!-- Big Payable Hero -->
+    <div class="payable-hero">
+      <div class="ph-left">
+        <div class="ph-eyebrow">Total Outstanding Payable</div>
+        <div class="ph-val">${fmt(tOut)}</div>
+        <div class="ph-desc">${pendC+partC+advC} invoices pending settlement · ${data.length} total</div>
+      </div>
+      <div class="ph-pills">
+        <div class="ph-pill">
+          <div class="ph-pill-val text-red">${fmt(ovAmt)}</div>
+          <div class="ph-pill-label">Overdue</div>
+        </div>
+        <div class="ph-pill">
+          <div class="ph-pill-val text-amber">${fmt(pendA)}</div>
+          <div class="ph-pill-label">Pending</div>
+        </div>
+        <div class="ph-pill">
+          <div class="ph-pill-val text-amber">${fmt(partA)}</div>
+          <div class="ph-pill-label">Partial</div>
+        </div>
+        <div class="ph-pill">
+          <div class="ph-pill-val text-blue">${fmt(advA)}</div>
+          <div class="ph-pill-label">Advance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Strip -->
+    <div class="kpi-strip">
+      <div class="kpi k-blue">
+        <div class="kpi-label"><span class="kpi-dot" style="background:var(--blue)"></span>Total Invoiced</div>
+        <div class="kpi-val">${fmt(tInv)}</div>
+        <div class="kpi-sub">${data.length} invoices · <span class="kpi-chip up">↑</span></div>
+      </div>
+      <div class="kpi k-green">
+        <div class="kpi-label"><span class="kpi-dot" style="background:var(--green)"></span>Settled Amount</div>
+        <div class="kpi-val">${fmt(tSettled)}</div>
+        <div class="kpi-sub">${paidC} fully paid</div>
+      </div>
+      <div class="kpi k-red">
+        <div class="kpi-label"><span class="kpi-dot" style="background:var(--red)"></span>Outstanding</div>
+        <div class="kpi-val">${fmt(tOut)}</div>
+        <div class="kpi-sub">${pendC+partC+advC} invoices unpaid</div>
+      </div>
+      <div class="kpi ${cRate<50?'k-red':cRate<75?'k-amber':'k-green'}">
+        <div class="kpi-label"><span class="kpi-dot" style="background:${cRate<50?'var(--red)':cRate<75?'var(--amber)':'var(--green)'}"></span>Settlement Rate</div>
+        <div class="kpi-val">${cRate}%</div>
+        <div class="kpi-sub">${cRate<50?'⚠ Critical':cRate<75?'Monitor':'✓ Healthy'}</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+      <div class="chart-panel wide">
+        <div class="cp-header"><div class="cp-title">Invoice Volume Trend</div><span class="cp-badge">Monthly</span></div>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="cp-header"><div class="cp-title">Payable Status</div><span class="cp-badge">${data.length} invoices</span></div>
+        <div class="chart-wrap sm"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Bar chart row -->
+    <div class="charts-row" style="grid-template-columns:1fr 1fr">
+      <div class="chart-panel">
+        <div class="cp-header"><div class="cp-title">Outstanding by Party</div><span class="cp-badge">Top 6</span></div>
+        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="cp-header"><div class="cp-title">Settlement Breakdown</div></div>
+        <div style="padding-top:8px">
+          <div class="prog-row">
+            <div class="prog-head"><span class="prog-label" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block"></span>Fully Paid (${paidC})</span><span class="prog-amt text-green">${fmt(paidA)}</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:${tInv?Math.round(paidA/tInv*100):0}%;background:var(--green)"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-head"><span class="prog-label" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:var(--blue);border-radius:50%;display:inline-block"></span>Advance (${advC})</span><span class="prog-amt text-blue">${fmt(advA)}</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:${tInv?Math.round(advA/tInv*100):0}%;background:var(--blue)"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-head"><span class="prog-label" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:var(--amber);border-radius:50%;display:inline-block"></span>Partial (${partC})</span><span class="prog-amt text-amber">${fmt(partA)}</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:${tInv?Math.round(partA/tInv*100):0}%;background:var(--amber)"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-head"><span class="prog-label" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:var(--red);border-radius:50%;display:inline-block"></span>Pending (${pendC})</span><span class="prog-amt text-red">${fmt(pendA)}</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:${tInv?Math.round(pendA/tInv*100):0}%;background:var(--red)"></div></div>
+          </div>
+        </div>
+        <!-- Quick stats -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="divider-lbl">Key Metrics</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">TDS Deducted</div>
+              <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--amber)">${fmt(tTDS)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">Advance Paid</div>
+              <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--blue)">${fmt(tAdv)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">Avg Invoice</div>
+              <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--text)">${data.length?fmt(tInv/data.length):'—'}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">Unique Parties</div>
+              <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--purple)">${Object.keys(pm).length}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="alerts-section">
+      <div class="section-header">
+        <div class="section-title">${alerts.length?'⚠ CFO Alerts':'Status'}</div>
+        ${alerts.length?`<span class="section-count">${alerts.length}</span>`:''}
+      </div>
+      ${alertsHTML}
+    </div>
+
+    ${ovTableHTML}
+
+    <!-- Party-wise grid -->
+    <div class="table-section">
+      <div class="section-header"><div class="section-title">Party-wise Outstanding</div></div>
+      <div class="party-grid">
+        ${parties.map(([name,p])=>{
+          const col=avatarColor(name);
+          const init=(name||'?').split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+          return `<div class="party-card">
+            <div class="party-avatar" style="background:${col}22;color:${col}">${init}</div>
+            <div class="party-info">
+              <div class="party-name">${name}</div>
+              <div class="party-meta">${p.count} invoice${p.count>1?'s':''} · Total ${fmt(p.inv)}${p.adv>0?' · Adv: '+fmt(p.adv):''}</div>
+            </div>
+            <div class="party-due" style="color:${p.out>0?'var(--red)':'var(--green)'}">${fmt(p.out)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:11px;color:var(--text3);padding:12px 0 4px">
+      FinLens · Auto-generated · ${data.length} entries · ${new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}
+    </div>`;
+
+  setTimeout(()=>drawCharts(paidA,advA,partA,pendA,parties,trendLabels,trendVals),80);
+}
+
+// ══ Charts ════════════════════════════════════════════════════════
+function drawCharts(paidA,advA,partA,pendA,parties,trendLabels,trendVals){
+  [pieChart,barChart,trendChart].forEach(c=>{if(c){c.destroy();}});
+  pieChart=barChart=trendChart=null;
+  const font={family:"'DM Sans', system-ui, sans-serif",size:11};
+
+  const pCtx=document.getElementById('pieChart');
+  if(pCtx){
+    pieChart=new Chart(pCtx,{
+      type:'doughnut',
+      data:{labels:['Paid','Advance','Partial','Pending'],
+        datasets:[{data:[Math.round(paidA),Math.round(advA),Math.round(partA),Math.round(pendA)],
+          backgroundColor:['#47FFB2','#5B8DEF','#FFB347','#FF4D6A'],
+          borderColor:'#111218',borderWidth:3,hoverOffset:10}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
+        plugins:{legend:{position:'bottom',labels:{font,padding:10,usePointStyle:true,boxWidth:8,color:'#8B90A0'}},
+          tooltip:{backgroundColor:'#1C1F28',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,
+            callbacks:{label:c=>`${c.label}: ₹${c.raw.toLocaleString('en-IN')}`}}}}
+    });
+  }
+
+  const top=parties.slice(0,6);
+  const bCtx=document.getElementById('barChart');
+  if(bCtx){
+    barChart=new Chart(bCtx,{
+      type:'bar',
+      data:{labels:top.map(([n])=>n.length>12?n.slice(0,11)+'…':n),
+        datasets:[{data:top.map(([,p])=>Math.round(p.out)),
+          backgroundColor:top.map(([,p])=>p.out>0?'rgba(255,77,106,0.8)':'rgba(71,255,178,0.8)'),
+          borderRadius:6,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#1C1F28',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:c=>`₹${c.raw.toLocaleString('en-IN')}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font,color:'#555A6A',maxRotation:30}},
+          y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font,color:'#555A6A',callback:v=>'₹'+Number(v).toLocaleString('en-IN')}}
+        }}
+    });
+  }
+
+  const tCtx=document.getElementById('trendChart');
+  if(tCtx&&trendLabels.length){
+    trendChart=new Chart(tCtx,{
+      type:'line',
+      data:{labels:trendLabels,
+        datasets:[{data:trendVals,borderColor:'#E8FF47',backgroundColor:'rgba(232,255,71,0.06)',
+          borderWidth:2,pointBackgroundColor:'#E8FF47',pointRadius:4,pointHoverRadius:6,
+          tension:0.35,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#1C1F28',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:c=>`₹${c.raw.toLocaleString('en-IN')}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font,color:'#555A6A'}},
+          y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{font,color:'#555A6A',callback:v=>'₹'+Number(v).toLocaleString('en-IN')}}
+        }}
+    });
+  }
+}
+
+// ══ Render Ledger ════════════════════════════════════════════════
 function renderLedger(){
   const data=load(); const el=document.getElementById('ledger-body');
-  if(!data.length){el.innerHTML='<div class="em">No entries. Upload a sheet or add manually.</div>';return;}
+  if(!data.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">No entries yet</div><div class="empty-desc">Upload a sheet or add entries manually.</div></div>`;
+    return;
+  }
   const today=new Date(); today.setHours(0,0,0,0);
   let sT=0,sX=0,sTo=0,sTDS=0,sAdv=0,sPay=0,sNet=0;
   const rows=data.map(e=>{
-    const n=netDue(e);
-    const dd=parseD(e.due_date); const ov=dd&&dd<today&&e.status!=='Paid';
+    const n=netDue(e); const dd=parseD(e.due_date); const ov=dd&&dd<today&&e.status!=='Paid';
     sT+=e.taxable||0;sX+=e.tax||0;sTo+=e.total||0;sTDS+=e.tds||0;sAdv+=e.advance||0;sPay+=e.payment||0;sNet+=n;
-    const sc=e.status==='Paid'?'var(--green)':e.status==='Advance Paid'?'var(--blue)':e.status==='Partial'?'var(--amber)':'var(--red)';
-    return`<tr class="${ov?'ovd':''}">
-      <td>${e.sr}</td><td>${fmtD(e.date)}</td>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.party}">${e.party}</td>
-      <td style="font-size:10px;color:var(--muted)">${e.gstin||'—'}</td>
-      <td>${e.invoice_no}</td>
-      <td class="num">${fmt(e.taxable)}</td><td class="num">${fmt(e.tax)}</td>
-      <td class="num" style="font-weight:700">${fmt(e.total)}</td>
-      <td class="num" style="color:var(--amber)">${fmt(e.tds)}</td>
-      <td style="text-align:center">${e.credit_days?e.credit_days+'d':'—'}</td>
-      <td>${fmtD(e.due_date)}</td>
-      <td class="num" style="color:var(--blue)">${fmt(e.advance)}</td>
-      <td class="num" style="color:var(--green)">${fmt(e.payment)}</td>
-      <td class="num" style="font-weight:700;color:${n>0?'var(--red)':'var(--green)'}">${fmt(n)}</td>
-      <td><select class="st-sel" style="color:${sc}" onchange="updStatus(${e.id},this.value)">
-        <option${e.status==='Pending'?' selected':''} value="Pending">Pending</option>
-        <option${e.status==='Advance Paid'?' selected':''} value="Advance Paid">Advance Paid</option>
-        <option${e.status==='Partial'?' selected':''} value="Partial">Partial</option>
-        <option${e.status==='Paid'?' selected':''} value="Paid">Paid</option>
+    const stMap={Paid:'paid',Pending:'pending',Partial:'partial','Advance Paid':'advance'};
+    return`<tr class="${ov?'overdue':''}">
+      <td class="text-mono" style="color:var(--text3)">${e.sr}</td>
+      <td style="color:var(--text2)">${fmtD(e.date)}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600" title="${e.party}">${e.party}</td>
+      <td style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">${e.gstin||'—'}</td>
+      <td style="font-family:var(--font-mono);color:var(--text2)">${e.invoice_no}</td>
+      <td class="num">${fmt(e.taxable)}</td>
+      <td class="num" style="color:var(--text3)">${fmt(e.tax)}</td>
+      <td class="num fw-7">${fmt(e.total)}</td>
+      <td class="num text-amber">${fmt(e.tds)}</td>
+      <td style="text-align:center;color:var(--text3)">${e.credit_days?e.credit_days+'d':'—'}</td>
+      <td style="color:var(--text2)">${fmtD(e.due_date)}</td>
+      <td class="num text-blue">${fmt(e.advance)}</td>
+      <td class="num text-green">${fmt(e.payment)}</td>
+      <td class="num fw-7" style="color:${n>0?'var(--red)':'var(--green)'}">${fmt(n)}</td>
+      <td><select class="st-sel" onchange="updStatus(${e.id},this.value)">
+        <option${e.status==='Pending'?' selected':''}>Pending</option>
+        <option${e.status==='Advance Paid'?' selected':''}>Advance Paid</option>
+        <option${e.status==='Partial'?' selected':''}>Partial</option>
+        <option${e.status==='Paid'?' selected':''}>Paid</option>
       </select></td>
       <td><button class="del-btn" onclick="delEntry(${e.id})">✕</button></td>
     </tr>`;
   }).join('');
-  el.innerHTML=`<div class="tbl-wrap"><table>
+
+  el.innerHTML=`<div class="tbl-wrap tbl-scroll"><table>
     <thead><tr>
       <th>#</th><th>Date</th><th>Party</th><th>GSTIN</th><th>Invoice</th>
       <th class="num">Taxable</th><th class="num">Tax</th><th class="num">Total</th>
@@ -671,201 +1566,96 @@ function renderLedger(){
     <tfoot><tr>
       <td colspan="5">Totals — ${data.length} entries</td>
       <td class="num">${fmt(sT)}</td><td class="num">${fmt(sX)}</td><td class="num">${fmt(sTo)}</td>
-      <td class="num" style="color:var(--amber)">${fmt(sTDS)}</td><td colspan="2"></td>
-      <td class="num" style="color:var(--blue)">${fmt(sAdv)}</td>
-      <td class="num" style="color:var(--green)">${fmt(sPay)}</td>
-      <td class="num" style="color:var(--red)">${fmt(sNet)}</td>
+      <td class="num text-amber">${fmt(sTDS)}</td><td colspan="2"></td>
+      <td class="num text-blue">${fmt(sAdv)}</td>
+      <td class="num text-green">${fmt(sPay)}</td>
+      <td class="num text-red">${fmt(sNet)}</td>
       <td colspan="2"></td>
     </tr></tfoot>
   </table></div>`;
 }
 
-// ══ Render CEO Dashboard ══════════════════════════════════
-function renderCEO(){
-  const data=filterData(load()); const el=document.getElementById('ceo-body');
-  const now=new Date();
-  document.getElementById('print-meta').textContent=
-    `${now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})} · ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${data.length} entries`;
-  if(!data.length){el.innerHTML='<div class="em">No data for selected period.</div>';return;}
-
-  const today=new Date(); today.setHours(0,0,0,0);
-  let tInv=0,tTDS=0,tAdv=0,tPay=0;
-  let paidA=0,advA=0,partA=0,pendA=0,paidC=0,advC=0,partC=0,pendC=0,ovAmt=0;
-  const ovList=[],pm={};
-
-  data.forEach(e=>{
-    const n=netDue(e),tot=e.total||0,tds=e.tds||0,adv=e.advance||0,pay=e.payment||0;
-    tInv+=tot;tTDS+=tds;tAdv+=adv;tPay+=pay;
-    if(e.status==='Paid'){paidA+=tot;paidC++;}
-    else if(e.status==='Advance Paid'){advA+=n;advC++;}
-    else if(e.status==='Partial'){partA+=n;partC++;}
-    else{pendA+=n;pendC++;}
-    const dd=parseD(e.due_date);
-    if(e.status!=='Paid'&&dd){dd.setHours(0,0,0,0);if(dd<today){const dOv=Math.floor((today-dd)/86400000);ovAmt+=n;ovList.push({...e,n,dOv});}}
-    if(!pm[e.party])pm[e.party]={inv:0,out:0,adv:0,count:0};
-    pm[e.party].inv+=tot;pm[e.party].out+=n;pm[e.party].adv+=adv;pm[e.party].count++;
+// ══ File Upload ══════════════════════════════════════════════════
+function handleDrop(e){ e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag'); const file=e.dataTransfer.files[0]; if(file)handleFile(file); }
+function handleFile(file){
+  if(!file)return;
+  const ok=document.getElementById('upload-ok'), err=document.getElementById('upload-err');
+  ok.style.display='none'; err.style.display='none';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      let rows=[];
+      const name=file.name.toLowerCase();
+      if(name.endsWith('.csv')){ rows=parseCSV(e.target.result); }
+      else {
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        const sn=wb.SheetNames.includes('Invoice Data')?'Invoice Data':wb.SheetNames[0];
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''});
+      }
+      if(!rows.length){err.style.display='block';err.textContent='No data found.';return;}
+      const parsed=parseRows(rows);
+      if(!parsed.length){err.style.display='block';err.textContent='Could not read data. Use the provided template.';return;}
+      const existing=load();
+      const existingKeys=new Set(existing.map(e=>(e.invoice_no+'__'+e.party).toLowerCase().trim()));
+      const fresh=parsed.filter(e=>!existingKeys.has((e.invoice_no+'__'+e.party).toLowerCase().trim()));
+      const dupes=parsed.length-fresh.length;
+      const startSr=existing.length+1;
+      fresh.forEach((e,i)=>{e.id=Date.now()+i;e.sr=startSr+i;});
+      const merged=[...existing,...fresh];
+      save(merged); updateBadge(merged);
+      ok.style.display='block';
+      ok.innerHTML=`✓ Imported <strong>${fresh.length} entries</strong> from ${file.name}.${dupes?` ${dupes} duplicate(s) skipped.`:''} Total: ${merged.length}`;
+      document.getElementById('file-inp').value='';
+    }catch(err2){err.style.display='block';err.textContent='Error: '+err2.message;}
+  };
+  if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+function parseRows(rows){
+  const colMap={'invoice date':'date','date':'date','party name':'party','party':'party','gstin':'gstin','invoice no':'invoice_no','invoice no *':'invoice_no','invoice':'invoice_no','invoice no.':'invoice_no','taxable amt (₹)':'taxable','taxable amt':'taxable','taxable':'taxable','taxable amount':'taxable','tax / gst (₹)':'tax','tax/gst (₹)':'tax','tax':'tax','gst':'tax','tax / gst':'tax','total (₹) auto':'total','total (₹)':'total','total':'total','tds (₹)':'tds','tds':'tds','credit days':'credit_days','due date':'due_date','due date auto':'due_date','advance paid (₹)':'advance','advance paid':'advance','advance':'advance','payment recd (₹)':'payment','payment recd':'payment','payment received':'payment','payment':'payment','net due (₹) auto':'net_due','net due (₹)':'net_due','net due':'net_due','status':'status','notes':'notes','sr no':'sr_orig','#':'sr_orig'};
+  const results=[];
+  rows.forEach(row=>{
+    const mapped={};
+    Object.entries(row).forEach(([k,v])=>{ const key=(k||'').toString().toLowerCase().trim().replace(/\*/g,'').trim(); const mk=colMap[key]; if(mk)mapped[mk]=v; });
+    if(!mapped.party&&!mapped.invoice_no)return;
+    const party=(mapped.party||'').toString().trim(), inv=(mapped.invoice_no||'').toString().trim();
+    if(!party||!inv)return;
+    let dateStr='';
+    if(mapped.date){ const d=mapped.date; if(d instanceof Date){dateStr=d.toISOString().split('T')[0];} else { const ds=String(d).trim(); const dm=ds.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/); if(dm){const[,dd,mm,yyyy]=dm;dateStr=`${yyyy.length===2?'20'+yyyy:yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;} else if(ds.match(/^\d{4}-\d{2}-\d{2}/)){ dateStr=ds.slice(0,10); } else if(!isNaN(Number(ds))){ dateStr=new Date((Number(ds)-25569)*86400000).toISOString().split('T')[0]; } } }
+    const taxable=parseFloat(mapped.taxable)||0, tax=parseFloat(mapped.tax)||0;
+    const total=mapped.total?parseFloat(mapped.total)||0:taxable+tax;
+    const tds=parseFloat(mapped.tds)||0, creditDays=parseInt(mapped.credit_days)||0;
+    const advance=parseFloat(mapped.advance)||0, payment=parseFloat(mapped.payment)||0;
+    let dueDate=mapped.due_date?String(mapped.due_date).trim():'';
+    if(!dueDate&&dateStr&&creditDays>0){const dd=new Date(dateStr);dd.setDate(dd.getDate()+creditDays);dueDate=dd.toISOString().split('T')[0];}
+    else if(dueDate instanceof Date){dueDate=dueDate.toISOString().split('T')[0];}
+    else if(dueDate&&!isNaN(Number(dueDate))){dueDate=new Date((Number(dueDate)-25569)*86400000).toISOString().split('T')[0];}
+    const nd=Math.max(0,total-tds-advance-payment);
+    let status=(mapped.status||'Pending').toString().trim();
+    if(!['Pending','Advance Paid','Partial','Paid'].includes(status))status='Pending';
+    results.push({id:0,sr:0,date:dateStr,party,gstin:(mapped.gstin||'').toString().trim(),invoice_no:inv,taxable,tax,total,tds,credit_days:creditDays,due_date:dueDate,advance,payment,net_due:nd,status,notes:(mapped.notes||'').toString().trim()});
   });
-
-  const tOut=advA+partA+pendA;
-  const tSettled=tPay+tAdv+tTDS;
-  const cRate=tInv>0?Math.round(tSettled/tInv*100):0;
-  const crClass=cRate<50?'red':cRate<75?'amber':'green';
-
-  // PAYABLE breakdown by urgency
-  const overduePayable=ovAmt;
-  const pendingPayable=pendA-overduePayable; // pending but not yet overdue
-  const partialPayable=partA;
-
-  const alerts=[];
-  if(ovList.length) alerts.push(`${ovList.length} invoice${ovList.length>1?'s':''} past due — ${fmt(ovAmt)} overdue payable`);
-  ovList.filter(e=>e.dOv>30).forEach(e=>alerts.push(`${e.party} | ${e.invoice_no} — ${e.dOv} days overdue (${fmt(e.n)} due)`));
-  data.filter(e=>e.status==='Advance Paid').forEach(e=>alerts.push(`Advance paid, goods awaited: ${e.party} | ${e.invoice_no} — ${fmt(e.advance)} paid`));
-  data.filter(e=>e.status==='Partial'&&e.total>0&&(e.advance+e.payment)/e.total<0.1).forEach(e=>alerts.push(`Very low payment: ${e.party} | ${e.invoice_no} — only ${fmt(e.advance+e.payment)} of ${fmt(e.total)}`));
-
-  const parties=Object.entries(pm).sort((a,b)=>b[1].out-a[1].out).slice(0,8);
-  const ovHTML=ovList.length?`<div class="card">
-    <div class="card-hd">Overdue Detail (${ovList.length})</div>
-    <div class="tbl-wrap"><table style="min-width:500px">
-      <thead><tr><th>Party</th><th>Invoice</th><th class="num">Net Due</th><th>Due Date</th><th class="num">Overdue By</th><th>Status</th></tr></thead>
-      <tbody>${ovList.sort((a,b)=>b.dOv-a.dOv).map(e=>`<tr>
-        <td style="color:var(--red);font-weight:600">${e.party}</td><td>${e.invoice_no}</td>
-        <td class="num" style="font-weight:700">${fmt(e.n)}</td><td>${fmtD(e.due_date)}</td>
-        <td class="num" style="color:var(--red);font-weight:700">${e.dOv}d</td>
-        <td><span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">${e.status}</span></td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-  </div>`:'';
-
-  el.innerHTML=`
-    <!-- ★ PAYABLE BANNER — primary view ★ -->
-    <div class="payable-banner">
-      <div class="payable-main">
-        <div class="payable-label">Total Payable (We Owe)</div>
-        <div class="payable-val">${fmt(tOut)}</div>
-        <div class="payable-sub">${pendC+partC+advC} invoices pending settlement</div>
-      </div>
-      <div class="payable-breakdown">
-        <div class="pb-item">
-          <div class="pb-item-val" style="color:var(--red)">${fmt(overduePayable)}</div>
-          <div class="pb-item-lbl">Overdue</div>
-        </div>
-        <div class="pb-item">
-          <div class="pb-item-val" style="color:var(--amber)">${fmt(partialPayable)}</div>
-          <div class="pb-item-lbl">Pending</div>
-        </div>
-        <div class="pb-item">
-          <div class="pb-item-val" style="color:var(--blue)">${fmt(advA)}</div>
-          <div class="pb-item-lbl">Advance Paid</div>
-        </div>
-        <div class="pb-item">
-          <div class="pb-item-val" style="color:var(--amber)">${fmt(partialPayable>0?partA:0)}</div>
-          <div class="pb-item-lbl">Partial</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="metrics">
-      <div class="mc blue"><div class="mc-label">Total Invoiced</div><div class="mc-val">${fmt(tInv)}</div><div class="mc-sub">${data.length} invoices</div></div>
-      <div class="mc green"><div class="mc-label">Total Settled</div><div class="mc-val">${fmt(tSettled)}</div><div class="mc-sub">${paidC} fully paid</div></div>
-      <div class="mc red"><div class="mc-label">Still Payable</div><div class="mc-val">${fmt(tOut)}</div><div class="mc-sub">${pendC+partC+advC} invoices</div></div>
-      <div class="mc red"><div class="mc-label">Overdue Payable</div><div class="mc-val">${fmt(ovAmt)}</div><div class="mc-sub">${ovList.length} past due date</div></div>
-      <div class="mc blue"><div class="mc-label">Advance Paid</div><div class="mc-val">${fmt(tAdv)}</div><div class="mc-sub">${advC} awaiting goods</div></div>
-      <div class="mc ${crClass}"><div class="mc-label">Settlement Rate</div><div class="mc-val">${cRate}%</div><div class="mc-sub">${cRate<50?'Critical':cRate<75?'Monitor':'Healthy'}</div></div>
-    </div>
-
-    <div class="charts-row">
-      <div class="chart-box">
-        <div class="chart-title">Payable breakdown</div>
-        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Outstanding by party (top 6)</div>
-        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd">${alerts.length?`⚠ CEO Alerts (${alerts.length})`:'All Clear'}</div>
-      ${alerts.length?alerts.map(a=>`<div class="alert-box">${a}</div>`).join(''):`<div class="all-ok">✓ No overdue or suspicious entries for this period.</div>`}
-    </div>
-
-    <div class="card">
-      <div class="card-hd">Settlement Breakdown</div>
-      <div class="pb-row"><span class="pb-label">Fully Paid (${paidC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(paidA/tInv*100):0}%;background:var(--green)"></div></div><span class="pb-amt" style="color:var(--green)">${fmt(paidA)}</span></div>
-      <div class="pb-row"><span class="pb-label">Advance (${advC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(advA/tInv*100):0}%;background:var(--blue)"></div></div><span class="pb-amt" style="color:var(--blue)">${fmt(advA)}</span></div>
-      <div class="pb-row"><span class="pb-label">Partial (${partC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(partA/tInv*100):0}%;background:var(--amber)"></div></div><span class="pb-amt" style="color:var(--amber)">${fmt(partA)}</span></div>
-      <div class="pb-row"><span class="pb-label">Pending (${pendC})</span><div class="pb"><div class="pb-fill" style="width:${tInv?Math.round(pendA/tInv*100):0}%;background:var(--red)"></div></div><span class="pb-amt" style="color:var(--red)">${fmt(pendA)}</span></div>
-    </div>
-
-    ${ovHTML}
-
-    <div class="card">
-      <div class="card-hd">Party-wise Payable</div>
-      ${parties.map(([name,p])=>`<div class="party-row">
-        <div>
-          <div class="party-name">${name}</div>
-          <div class="party-meta">${p.count} invoice${p.count>1?'s':''} · Total ${fmt(p.inv)}${p.adv>0?' · Advance: '+fmt(p.adv):''}</div>
-        </div>
-        <div class="party-out" style="color:${p.out>0?'var(--red)':'var(--green)'}">${fmt(p.out)}</div>
-      </div>`).join('')}
-    </div>
-
-    <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">
-      Auto-generated · ${data.length} entries · Cannot be manually altered
-    </div>`;
-
-  setTimeout(()=>drawCharts(paidA,advA,partA,pendA,parties),60);
+  return results;
+}
+function parseCSV(text){
+  const lines=text.split('\n').filter(l=>l.trim()); if(lines.length<2)return[];
+  const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+  return lines.slice(1).map(line=>{ const vals=line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||[]; const obj={}; headers.forEach((h,i)=>{obj[h]=(vals[i]||'').replace(/"/g,'').trim();}); return obj; }).filter(r=>Object.values(r).some(v=>v));
 }
 
-// ══ Charts ════════════════════════════════════════════════
-function drawCharts(paidA,advA,partA,pendA,parties){
-  if(pieChart){pieChart.destroy();pieChart=null;}
-  if(barChart){barChart.destroy();barChart=null;}
-  const pCtx=document.getElementById('pieChart');
-  const bCtx=document.getElementById('barChart');
-  if(!pCtx||!bCtx) return;
-  const font={family:"'Segoe UI',system-ui,sans-serif",size:12};
-  pieChart=new Chart(pCtx,{
-    type:'doughnut',
-    data:{labels:['Paid','Advance Paid','Partial','Pending'],
-      datasets:[{data:[Math.round(paidA),Math.round(advA),Math.round(partA),Math.round(pendA)],
-        backgroundColor:['#059669','#2563EB','#D97706','#DC2626'],
-        borderColor:'#fff',borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'66%',
-      plugins:{legend:{position:'bottom',labels:{font,padding:12,usePointStyle:true,boxWidth:10}},
-        tooltip:{callbacks:{label:c=>`${c.label}: ₹${c.raw.toLocaleString('en-IN')}`}}}}
-  });
-  const top=parties.slice(0,6);
-  barChart=new Chart(bCtx,{
-    type:'bar',
-    data:{labels:top.map(([n])=>n.length>13?n.slice(0,12)+'…':n),
-      datasets:[{data:top.map(([,p])=>Math.round(p.out)),
-        backgroundColor:top.map(([,p])=>p.out>0?'rgba(220,38,38,.82)':'rgba(5,150,105,.82)'),
-        borderRadius:6,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`₹${c.raw.toLocaleString('en-IN')}`}}},
-      scales:{x:{grid:{display:false},ticks:{font,color:'#6B7280',maxRotation:30}},
-        y:{grid:{color:'#F3F4F6'},ticks:{font,color:'#6B7280',callback:v=>'₹'+Number(v).toLocaleString('en-IN')}}}}
-  });
-}
-
-// ══ CSV Export ════════════════════════════════════════════
+// ══ Export / Backup / Restore ════════════════════════════════════
 function exportCSV(){
   const data=load(); if(!data.length){alert('No data.');return;}
   const keys=['sr','date','party','gstin','invoice_no','taxable','tax','total','tds','credit_days','due_date','advance','payment','net_due','status'];
   const labels=['Sr','Date','Party','GSTIN','Invoice','Taxable','Tax','Total','TDS','Credit Days','Due Date','Advance','Payment','Net Due','Status'];
   const rows=data.map(e=>keys.map(k=>{const v=e[k]??'';return String(v).includes(',')?`"${v}"`:v;}).join(','));
   const blob=new Blob([[labels.join(','),...rows].join('\n')],{type:'text/csv'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`invoices_${tod()}.csv`;a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finlens_${tod()}.csv`;a.click();
 }
-
-// ══ Backup / Restore ══════════════════════════════════════
 function backupData(){
   const data=load();
-  const blob=new Blob([JSON.stringify({v:5,date:new Date().toISOString(),count:data.length,data},null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`invoice_backup_${tod()}.json`;a.click();
+  const blob=new Blob([JSON.stringify({v:1,date:new Date().toISOString(),count:data.length,data},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finlens_backup_${tod()}.json`;a.click();
 }
 function restoreData(inp){
   const file=inp.files[0]; if(!file)return;
@@ -873,71 +1663,38 @@ function restoreData(inp){
   r.onload=e=>{
     try{
       const b=JSON.parse(e.target.result);
-      const rows=b.data||b;
-      if(!Array.isArray(rows)){alert('Invalid backup.');return;}
+      const rows=b.data||b; if(!Array.isArray(rows)){alert('Invalid backup.');return;}
       if(!confirm(`Restore ${rows.length} entries? Current data will be replaced.`))return;
-      save(rows); updateHeader(); alert(`✓ Restored ${rows.length} entries.`);
+      save(rows); updateBadge(rows); alert(`✓ Restored ${rows.length} entries.`);
     }catch(err){alert('Invalid file: '+err.message);}
   };
   r.readAsText(file); inp.value='';
 }
 
-// ══ Template Download ═════════════════════════════════════
+// ══ Template download ═════════════════════════════════════════════
 function downloadTemplate(){
-  // Embedded as data URL — SheetJS generates XLSX on the fly
   const wb=XLSX.utils.book_new();
   const headers=['Invoice Date *','Party Name *','GSTIN','Invoice No *','Taxable Amt (₹)','Tax / GST (₹)','Total (₹) AUTO','TDS (₹)','Credit Days','Due Date AUTO','Advance Paid (₹)','Payment Recd (₹)','Net Due (₹) AUTO','Status','Notes'];
-  const sampleRows=[
-    ['15/03/2026','Rajesh Traders Pvt Ltd','22AAAAA0000A1Z5','INV-001',10000,1800,11800,0,30,'','2000','','','Partial','First order'],
-    ['16/03/2026','Kumar Suppliers','','INV-002',25000,4500,29500,295,45,'','','','','Pending',''],
-    ['','','','','','','','','','','','','','',''],
-  ];
-  const wsData=[headers,...sampleRows];
-  const ws=XLSX.utils.aoa_to_sheet(wsData);
-  // Column widths
+  const sample=[['15/03/2026','Rajesh Traders Pvt Ltd','22AAAAA0000A1Z5','INV-001',10000,1800,11800,0,30,'','2000','','','Partial','First order'],['16/03/2026','Kumar Suppliers','','INV-002',25000,4500,29500,295,45,'','','','','Pending','']];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...sample]);
   ws['!cols']=[{wch:15},{wch:30},{wch:20},{wch:15},{wch:16},{wch:14},{wch:15},{wch:12},{wch:12},{wch:15},{wch:18},{wch:18},{wch:16},{wch:18},{wch:25}];
   XLSX.utils.book_append_sheet(wb,ws,'Invoice Data');
-
-  // Instructions sheet
-  const inst=[
-    ['INVOICE TRACKER — TEMPLATE INSTRUCTIONS'],[''],
-    ['YELLOW COLUMNS — Fill these','',''],
-    ['Invoice Date *','Date of invoice','Format: DD/MM/YYYY'],
-    ['Party Name *','Supplier/Customer name','Required'],
-    ['GSTIN','GST number','Optional'],
-    ['Invoice No *','Invoice number','e.g. INV-001'],
-    ['Taxable Amt (₹)','Base amount before tax','Numbers only'],
-    ['Tax / GST (₹)','GST amount','Numbers only'],
-    ['TDS (₹)','Tax deducted at source','0 if none'],
-    ['Credit Days','Days to pay e.g. 30','Due date auto-calculates'],
-    ['Advance Paid (₹)','Paid before receiving goods','0 if none'],
-    ['Payment Recd (₹)','Received from party after invoice','0 if none'],
-    ['Status','Dropdown','Pending / Advance Paid / Partial / Paid'],
-    [''],
-    ['GREEN COLUMNS — Do not fill, auto-calculated','',''],
-    ['Total (₹)','= Taxable + Tax','Auto'],
-    ['Due Date','= Invoice Date + Credit Days','Auto'],
-    ['Net Due','= Total - TDS - Advance - Payment','Auto'],
-    [''],
-    ['UPLOAD STEPS','',''],
-    ['1','Fill this sheet','Only yellow columns needed'],
-    ['2','Save the file','Keep as .xlsx or save as .csv'],
-    ['3','Upload to tracker','Click Upload Sheet on the website'],
-    ['4','Dashboard ready','CEO Dashboard auto-builds instantly'],
-  ];
-  const ws2=XLSX.utils.aoa_to_sheet(inst);
-  ws2['!cols']=[{wch:25},{wch:35},{wch:40}];
-  XLSX.utils.book_append_sheet(wb,ws2,'Instructions');
-
-  XLSX.writeFile(wb,'invoice_template.xlsx');
+  XLSX.writeFile(wb,'finlens_template.xlsx');
 }
 
-// ══ Print PDF ═════════════════════════════════════════════
-function printDash(){
-  document.getElementById('print-hd').style.display='flex';
-  setTimeout(()=>{ window.print(); document.getElementById('print-hd').style.display='none'; },400);
-}
+// ══ Print ════════════════════════════════════════════════════════
+function printDash(){ window.print(); }
 
+// ══ Init ═════════════════════════════════════════════════════════
+function init(){
+  document.getElementById('f-date').value=tod();
+  const data=load();
+  updateBadge(data);
+  renderDash();
+  // Update org avatar initials
+  const orgName='My Company';
+  document.getElementById('org-av').textContent=orgName.split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
 init();
 </script>
 </body>
